@@ -1,0 +1,80 @@
+1. 
+
+Create TABLE Edges (Source int, Destination int);
+
+INSERT INTO Edges VALUES (10, 5), (6, 25), (1, 3), (4, 4);
+
+SELECT * FROM Edges;
+
+SELECT Source FROM Edges;
+
+SELECT * FROM Edges WHERE Source > Destination;
+
+INSERT INTO Edges VALUES ('-1', '2000');
+
+No error is thrown. From the docs this is because sqlite uses rigid typing and a "Rigidly-typed database will convert the string '123' into an integer 123 ...". The string is cast into an integer. 
+
+2. 
+
+Create TABLE MyRestaurants (Name varchar(100), Cuisine varchar(100), Distance int, Date varchar(10), Enjoyed boolean);
+
+3. 
+
+INSERT INTO MyRestaurants VALUES ('Cafe Juanita', 'Italian', 20, '2014-07-01', NULL);
+
+INSERT INTO MyRestaurants VALUES ('Flintcreek Catte Co.', 'Seafood', 16, '2015-08-02', 1);
+
+INSERT INTO MyRestaurants VALUES ('Cafe Munir', 'Lebanese', 12, '2016-09-03', 1);
+
+INSERT INTO MyRestaurants VALUES ('The Shambles', 'Bar', 8, '2017-10-04', 0);
+
+INSERT INTO MyRestaurants VALUES ('Wataru', 'Sushi', 4, '2018-11-05', 0);
+
+
+4. 
+
+.headers ON
+
+.mode csv
+SELECT * FROM MyRestaurants;
+
+.mode list
+SELECT * FROM MyRestaurants;
+
+.width 15, 15, 15, 15, 15
+.mode column
+SELECT * FROM MyRestaurants;
+
+.headers OFF
+
+.mode csv
+SELECT * FROM MyRestaurants;
+
+.mode list
+SELECT * FROM MyRestaurants;
+
+.width 15, 15, 15, 15, 15
+.mode column
+SELECT * FROM MyRestaurants;
+
+
+5. 
+
+SELECT Name, Distance 
+FROM MyRestaurants 
+WHERE Distance <= 20
+ORDER BY Name ASC;
+
+6.
+
+SELECT * 
+FROM MyRestaurants 
+WHERE Enjoyed 
+AND Date < Date('now', '-3 month');
+
+
+7. 
+
+SELECT * 
+FROM MyRestaurants 
+WHERE Distance <= 10;
