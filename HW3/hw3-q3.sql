@@ -1,9 +1,31 @@
-/*
+/* PROMPT
 3. For each origin city, find the percentage of departing flights shorter than 3 hours. For this question, treat flights with NULL actual_time values as longer than 3 hours. 
-Name the output columns ​origin_city​ and ​percentage​. Order by percentage value, ascending. Be careful to handle cities without any flights shorter than 3 hours. We will accept either 0 or NULL as the result for those cities. Report percentages as percentages not decimals (e.g., report 75.25 rather than 0.7525). 
-[Output relation cardinality: 327]
 
-The number of rows your query returns:
+Name the output columns ​origin_city​ and ​percentage​. Order by percentage value, ascending. Be careful to handle cities without any flights shorter than 3 hours. We will accept either 0 or NULL as the result for those cities. Report percentages as percentages not decimals (e.g., report 75.25 rather than 0.7525).
+*/
+
+SELECT DISTINCT 
+       f2.origin_city AS origin_city,
+       CASE WHEN f1.p IS null 
+            THEN 0 
+            ELSE ROUND(f1.p * 100.00 / f2.p, 2)
+        END AS percentage
+  FROM (SELECT origin_city, 
+               COUNT(actual_time) AS p
+          FROM flights
+         WHERE actual_time > 0 
+           AND actual_time < (3 * 60)
+         GROUP BY origin_city) AS f1
+  FULL JOIN 
+       (SELECT origin_city, 
+               COUNT(actual_time) AS p
+          FROM flights
+         GROUP BY origin_city) AS f2 
+    ON f1.origin_city = f2.origin_city
+ ORDER BY percentage, origin_city
+ 
+/* RESULT
+The number of rows the query returns:
 	327
 How long the query took:
 	7s
@@ -29,24 +51,4 @@ The first 20 rows of the result:
 	Plattsburgh NY,64.0000000000000
 	Las Vegas NV,64.4700000000000
 	Christiansted VI,64.6700000000000
-*/
-
-SELECT DISTINCT 
-       f2.origin_city AS origin_city,
-       CASE WHEN f1.p IS null 
-            THEN 0 
-            ELSE ROUND(f1.p * 100.00 / f2.p, 2)
-        END AS percentage
-  FROM (SELECT origin_city, 
-               COUNT(actual_time) AS p
-          FROM flights
-         WHERE actual_time > 0 
-           AND actual_time < (3 * 60)
-         GROUP BY origin_city) AS f1
-  FULL JOIN 
-       (SELECT origin_city, 
-               COUNT(actual_time) AS p
-          FROM flights
-         GROUP BY origin_city) AS f2 
-    ON f1.origin_city = f2.origin_city
- ORDER BY percentage, origin_city
+ */
