@@ -34,8 +34,8 @@ SELECT DISTINCT
        f1.origin_city
   FROM flights AS f1,
        (SELECT DISTINCT 
-		       origin_city, 
-			   MAX(actual_time) AS max_time
+               origin_city, 
+               MAX(actual_time) AS max_time
           FROM flights
          GROUP BY origin_city) AS f2
  WHERE f1.origin_city = f2.origin_city 

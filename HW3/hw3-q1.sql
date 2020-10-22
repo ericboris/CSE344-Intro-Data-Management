@@ -1,5 +1,8 @@
 /*
-The number of rows your query returns:
+1. For each origin city, find the destination city (or cities) with the longest direct flight. By direct flight, we mean a flight with no intermediate stops. Judge the longest flight in time, not distance.
+Name the output columns ​origin_city​, ​dest_city​, and ​time​ representing the flight time between them. Do not include duplicates of the same origin/destination city pair. Order the result by origin_city and then dest_city (ascending, i.e. alphabetically).
+
+The number of rows the query returns:
 	334
 How long the query took:
 	2s
@@ -28,9 +31,9 @@ The first 20 rows of the result:
 */
 
 SELECT DISTINCT 
-	   f1.origin_city AS origin_city, 
-	   f1.dest_city AS dest_city,
-	   f1.actual_time AS time
+       f1.origin_city AS origin_city, 
+       f1.dest_city AS dest_city,
+       f1.actual_time AS time
   FROM flights AS f1,
        (SELECT origin_city, 
 		       MAX(actual_time) AS max_time
