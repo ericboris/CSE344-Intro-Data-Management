@@ -1,0 +1,7 @@
+PROMPT 
+The DBMS that we use in this assignment is running somewhere in one of Microsoft's data centers. Comment on your experience using this DBMS cloud service. What do you think about the idea of offering a DBMS as a service in a public cloud?
+
+RESPONSE
+Initially progress was nearly impossible because even the most basic queries took minutes, 500+ seconds, but with the indexing queries in the Speed Up Queries Piazza post those times dropped down into the 0-10s range. A couple minor gripes include the autocorrect and the visual clutter of the interface, neither which I care for since I'm used to just using a text editor. But again, minor gripes. Overall the process was pleasant. 
+
+Regarding what I think of the idea of offering a public cloud DBMS, I don't have strong feelings about it. It seems as though cloud computing is becoming more prevalent for every computing need so it's really no surprise and from a design/profit standpoint I guess it makes sense to have on demand compute for lease but from a security/privacy/personal liberty standpoint I usually think centralization is concerning. 

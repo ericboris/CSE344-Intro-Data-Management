@@ -1,0 +1,5 @@
+Focused, Organized, Confident
+
+Slab Cutting (https://github.com/ericboris/slab-cutting)Designed an algorithm for cutting arbitrarily sized rectangular slabs to maximize usable area
+
+Slab Cutting was a problem on a homework assignment for the Algorithm Design class I took during Spring 2020. It's not the largest or most interesting sounding project but it's one of my favorites that I've worked on because it was challenging, had an elegant solution, and one of my most polished submissions. As assigned, we were given a slab K of M x N dimensions and a set of slabs S where each slab s_i in the set had dimensions m_i x n_i. Our goal was to cut slab K into pieces and maximize the usable cuts / minimize waste, where a usable cut was one from S. I think that one of the things I liked about it  so much was that it was the first algorithm I came up with where Dynamic Programming really clicked. I was enjoying it so much that I coded it up in Java to play with - the only algorithm I wrote in that class that I did that for. I was enjoying it so much that I coded it up in Java to play with - the only algorithm I wrote in that class that I did that for. 
