@@ -31,3 +31,15 @@ R1(A,E), R2(A,B,C,D)
 Out of FDs.
 Thus, R(A,B,C,D,E) in BCNF is
 R1(A,E), R2(A,B,C,D)
+
+c. Given R(A,B,C,D), all subsets of {A,B,C,D} are closed.
+
+{A->BCD, B->ACD, C->ABD, D->ABC}
+
+d. Given R(A,B,C,D), the only closed subsets of {A,B,C,D} are {} and {A,B,C,D}.
+
+{A->BCD}
+
+e. Given R(A,B,C,D), the only closed subsets of {A,B,C,D} are {}, {B,C}, and {A,B,C,D}.
+
+{B->C, A->BCD}
