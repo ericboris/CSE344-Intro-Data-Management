@@ -50,4 +50,6 @@ CREATE TABLE ProfessionalDriver (
     FOREIGN KEY (driverId) REFERENCES Driver (driverId)
 );
 
+/* b. */
 
+/* c. */
