@@ -1,0 +1,33 @@
+a. R(A,B,C,D,E) and D->B, CE->A
+
+Choose FD: D->B.
+Closure over D is {D} += {B,D}
+So R1(D,B), R2(A,C,D,E)
+
+Choose FD: CE -> A.
+Closure over CE is {C,E} += {A,C,E}
+So R1(D,B), R3(A,C,E), R4(C,D,E)
+
+Out of FDs.
+Thus, R(A,B,C,D,E) in BCNF is
+R1(D,B), R3(A,C,E), R4(C,D,E)
+
+b. R(A,B,C,D,E) and A->E, BC->A, DE->B
+
+Choose FD: A->E
+Closure over A is {A} += {A,E}
+R1(A,E), R2(A,B,C,D)
+
+Choose FD: BC->A
+Closure over BC is {B,C} += {A,B,C,E}
+But there is no relation with all {A,B,C,E}
+R1(A,E), R2(A,B,C,D)
+
+Choose FD: DE->B
+Closure over DE is {D,E} += {B,D,E}
+But there is no relation with all {B,D,E}
+R1(A,E), R2(A,B,C,D)
+
+Out of FDs.
+Thus, R(A,B,C,D,E) in BCNF is
+R1(A,E), R2(A,B,C,D)
