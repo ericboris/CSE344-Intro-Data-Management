@@ -57,3 +57,18 @@ CREATE TABLE monthdiscount (
     FOREIGN KEY (discount) REFERENCES Sales (discount),
     PRIMARY KEY (month)
 );
+
+/* 4. */
+
+INSERT INTO nameprice (name, price)
+SELECT distinct name, price
+FROM Sales;
+
+INSERT INTO namemonth (name, month)
+SELECT distinct name, month
+FROM Sales;
+
+
+INSERT INTO monthdiscount (month, discount)
+SELECT distinct month, discount
+FROM Sales;

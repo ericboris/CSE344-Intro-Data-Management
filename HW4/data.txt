@@ -1,4 +1,3 @@
-name	discount	month	price
 bar1	15%	apr	19
 bar8	15%	apr	19
 gizmo3	15%	apr	19
