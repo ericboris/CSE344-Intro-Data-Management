@@ -88,7 +88,11 @@ vehicle.
 Since the relationship between cars and nonprofessional drivers is many to many, I've represented
 that relationship by creating a table called Drives that maps nonprofessional drivers onto cars
 and cars to nonprofessional drivers. Since the relationship between trucks and professional drivers
+<<<<<<< HEAD
 is one to many I represented that relationship by giving each truck an operatedBy attribute that,
+=======
+is one to many I represented that relationship by giving each truck an operated by attribute that,
+>>>>>>> be6bb60f56d01a1315928a0d467348a14e96965f
 since each truck is unique, means that each truck has a single driver. The different relationships
 between cars and trucks and their driver dictated their representations.
 
