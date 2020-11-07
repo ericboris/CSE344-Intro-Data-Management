@@ -5,7 +5,7 @@ CREATE TABLE InsuranceCo (
 );
 
 CREATE TABLE InsurancePlan (
-    maxLiability float,
+    maxLiability real,
     insurer varchar(50),
     licensePlate varchar(7),
     FOREIGN KEY (insurer) REFERENCES InsuranceCo (name),
@@ -43,7 +43,7 @@ CREATE TABLE NonProfessionalDriver (
 );
 
 CREATE TABLE ProfessionalDriver (
-    medicalHistory varchar(50),
+    medicalHistory varchar(5000),
     driverId int,
     FOREIGN KEY (driverId) REFERENCES Driver (driverId),
     PRIMARY KEY (driverid)
@@ -51,9 +51,9 @@ CREATE TABLE ProfessionalDriver (
 
 CREATE TABLE Drives (
     driverId int,
-    make varchar(50),
+    licensePlate varchar(50),
     FOREIGN KEY (driverId) REFERENCES NonProfessionalDriver (driverId),
-    FOREIGN KEY (make) REFERENCES Car (make)
+    FOREIGN KEY (licensePlate) REFERENCES Car (licensePlate)
 );
 
 CREATE TABLE Car (

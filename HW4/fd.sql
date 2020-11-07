@@ -22,6 +22,9 @@ R1(n,p), R3(n,m), R4(m,d)
 */
 
 /*
+
+START HERE
+
 n->d
 select distinct name, discount
 from sales
@@ -30,6 +33,8 @@ order by name, discount;
 
 /*
 n->m
+*/
+/*
 select distinct name,month
 from sales
 order by name, month;
