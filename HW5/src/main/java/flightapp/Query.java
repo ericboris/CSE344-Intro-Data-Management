@@ -19,6 +19,9 @@ public class Query {
     private static final int HASH_STRENGTH = 65536;
     private static final int KEY_LENGTH = 128;
 
+    // Let currentUser be the currently logged in username.
+    private String currentUser;
+
     // Let the following section contain predefined SQL queries.
 
     // Canned queries
@@ -36,6 +39,10 @@ public class Query {
     // Used to add a new user to the Users table.
     private static final String INSERT_USER_DATA = "INSERT INTO Users VALUES (?, ?, ?, ?);";
     private PreparedStatement insertUserDataStatement;
+
+    // Used to get a salt and hash based on username for user login.
+    private static final String USER_LOGIN = "SELECT salt, hash FROM Users WHERE LOWER(username) = ?;";
+    private PreparedStatement userLoginStatement;
 
     public Query() throws SQLException, IOException {
 	this(null, null, null, null);
@@ -108,7 +115,7 @@ public class Query {
 
     /**
      * Clear the data in any custom tables created.
-     * 
+     *
      * WARNING! Do not drop any tables and do not clear the flights table.
      */
     public void clearTables() {
@@ -125,10 +132,11 @@ public class Query {
     private void prepareStatements() throws SQLException {
 	checkFlightCapacityStatement = conn.prepareStatement(CHECK_FLIGHT_CAPACITY);
 	tranCountStatement = conn.prepareStatement(TRANCOUNT_SQL);
-	// TODO : YOUR CODE HERE	
-	
+	// TODO : YOUR CODE HERE
+
 	checkUsernameExistsStatement = conn.prepareStatement(CHECK_USERNAME_EXISTS);
 	insertUserDataStatement = conn.prepareStatement(INSERT_USER_DATA);
+	userLoginStatement = conn.prepareStatement(USER_LOGIN);
     }
 
     /**
@@ -142,8 +150,58 @@ public class Query {
      */
     public String transaction_login(String username, String password) {
 	try {
-	    // TODO: YOUR CODE HERE
+	    // We use lowercase username since usernames are case insensitive.
+	    String lowercaseUsername = username.toLowerCase();
+    
+	    // Prevent the same user from logging in multiple times.
+	    if (lowercaseUsername.equals(this.currentUser)) {
+		return "User already logged in\n";
+	    }
+
+	    // Log the user in.
+	    try {
+		// Prepare the username statement.
+		userLoginStatement.clearParameters();
+		userLoginStatement.setString(1, lowercaseUsername);
+
+		// Let rs be the results of the query requesting salt and hash.
+		ResultSet rs = userLoginStatement.executeQuery();
+
+		// Only proceed if the query returned a result.
+		if (rs.isBeforeFirst() || lowercaseUsernameQueryResult.getRow() != 0 ) {
+		    // Grab the stored salt.
+		    byte[] salt = rs.getBytes("salt");
+
+		    // Specify the hash parameters from the given salt.
+		    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
+
+		    // Generate a hash.
+		    SecretKeyFactory factory = null;
+		    byte[] generatedHash = null;
+		    try {
+			factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+			generatedHash = factory.generateSecret(spec).getEncoded();
+		    } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
+			throw new IllegalStateException();
+		    }
+
+		    // Get the hash returned by the query.
+		    byte[] returnedHash = rs.getBytes("hash");
+		   
+		    // We can log the user in if the hashes are equivalent.
+		    if (Arrays.equals(generatedHash, returnedHash)) {
+			rs.close();
+			this.currentUser = lowercaseUsername;
+			return "Logged in as " + username "\n";
+		    }
+		}
+	    } catch (SQLexception e) {
+		e.printStackTrace();
+	    }
+	    
+	    // Notify if any of the above failed.
 	    return "Login failed\n";
+
 	} finally {
 	    checkDanglingTransaction();
 	}
@@ -167,21 +225,21 @@ public class Query {
 	    // Prepare the username statement.
 	    checkUsernameExistsStatement.clearParameters();
 	    checkUsernameExistsStatement.setString(1, username.toLowerCase());
-	    
+
 	    // Query the Users table for any usernames matching username.
 	    ResultSet rs = checkUsernameExistsStatement.executeQuery();
 
 	    // Return an error if the query returned any rows
-	    // or if the amount being added to the acount is negative. 
+	    // or if the amount being added to the acount is negative.
 	    if (rs.isBeforeFirst() || usernameQueryResult.getRow() != 0 || initAmount < 0) {
 		return "Failed to create user\n";
 	    } else {
 		// Remember to close the query connection.
-		rs.close() 
+		rs.close()
 	    }
-	   
+
 	    // Our inputs were valid.
-	    // And we can add the new user to the table. 
+	    // And we can add the new user to the table.
 	    // But first, encrypt the password.
 
 	    // Generate a random crypographic salt.
@@ -189,9 +247,9 @@ public class Query {
 	    byte[] salt = new byte[16];
 	    random.nextBytes(salt);
 
-	    // Specify the hash parameters. 
+	    // Specify the hash parameters.
 	    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
-	    
+
 	    // Generate the hash.
 	    SecretKeyFactory factory = null;
 	    byte[] hash = null;
@@ -204,12 +262,12 @@ public class Query {
 
 	    // With the data prepared, insert the user data into the table.
 	    insertUserDataStatement.clearParameters();
-	    
+
 	    insertUserDataStatement.setString(1, username);
 	    insertUserDataStatement.setBytes(2, salt);
 	    insertUserDataStatement.setBytes(3, hash);
 	    insertUserDataStatement.setInt(4, initAmount);
-	    
+
 	    insertUserDataStatement.executeUpdate();
 
 	    // Notify that the insertion was successful.
@@ -415,7 +473,7 @@ public class Query {
 
     /**
      * Throw IllegalStateException if transaction not completely complete, rollback.
-     * 
+     *
      */
     private void checkDanglingTransaction() {
 	try {
