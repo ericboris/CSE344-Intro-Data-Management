@@ -1,4 +1,4 @@
-PRAGMA foreign_keys = ON;
+-- PRAGMA foreign_keys = ON;
 
 CREATE TABLE Carriers (
 	cid varchar(7), 
