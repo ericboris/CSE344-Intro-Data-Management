@@ -71,8 +71,8 @@ public class Query {
 					      + "   AND dest_city = ?"
 					      + "   AND day_of_month = ?"
 					      + "   AND canceled <> 1"
-					      + " ORDER BY actual_time ASC"
-					      + "   AND fid ASC;";
+					      + " ORDER BY actual_time ASC,"
+					      + "       fid ASC;";
     private PreparedStatement directFlightStatement;
     
     // Used to get the top one-hop flights from src to dst in a month.
@@ -104,19 +104,28 @@ public class Query {
 					       + "   AND f1.day_of_month = f2.day_of_month"
 					       + "   AND f1.canceled <> 1"
 					       + "   AND f2.canceled <> 1"
-					       + " ORDER BY (f1.actual_time + f2.actual_time) ASC;";
+					       + " ORDER BY (f1.actual_time + f2.actual_time) ASC,"
+					       + "       f1.fid,"
+					       + "       f2.fid;";
     private PreparedStatement oneHopFlightStatement;
 
+    /**
+     * Class constructor.
+     */
     public Query() throws SQLException, IOException {
 	this(null, null, null, null);
 	this.itineraries = new ArrayList<>();
 	this.currentUser = null;
     }
 
+    /**
+     * Class constructor.
+     */
     protected Query(String serverURL, String dbName, String adminName, String password)
 	throws SQLException, IOException {
 	    conn = serverURL == null ? openConnectionFromDbConn()
 		: openConnectionFromCredential(serverURL, dbName, adminName, password); prepareStatements(); } /**
+
      * Return a connecion by using dbconn.properties file
      *
      * @throws SQLException
@@ -223,8 +232,8 @@ public class Query {
 	    // We use lowercase for name comparisons because username is case insensitive.
 	    String lowercaseUsername = username.toLowerCase();
     
-	    // Prevent the same user from logging in multiple times.
-	    if (lowercaseUsername.equals(this.currentUser)) {
+	    // Prevent multiple users from being logged in simultaneously.
+	    if (this.currentUser != null) {
 		return "User already logged in\n";
 	    }
 
@@ -262,7 +271,7 @@ public class Query {
 		    if (Arrays.equals(generatedHash, returnedHash)) {
 			rs.close();
 			// Store the lowercase name to maintain case insensitive username comparisons.
-			this.currentUser = lowercaseUsername;
+			this.currentUser = username;
 			return "Logged in as " + username + "\n";
 		    }
 		}
@@ -302,7 +311,7 @@ public class Query {
 
 	    // Return an error if the query returned any rows
 	    // or if the amount being added to the acount is negative.
-	    if (rs.next()) {
+	    if (rs.next() || initAmount < 0) {
 		return "Failed to create user\n";
 	    } else {
 		// Remember to close the query connection.
@@ -408,15 +417,15 @@ public class Query {
 		while (directFlightQueryResult.next()) {	
 		    // Extract the relevant query information.
 		    // Flight 1 info.
-		    int f1fid = directFlightQueryResult.getInt("f1_fid");
-		    int f1dayOfMonth = directFlightQueryResult.getInt("f1_day_of_month");
-		    String f1carrierId = directFlightQueryResult.getString("f1_carrier_id");
-		    String f1flightNum = directFlightQueryResult.getString("f1_flight_num");
-		    String f1originCity = directFlightQueryResult.getString("f1_origin_city");
-		    String f1destCity = directFlightQueryResult.getString("f1_dest_city");
-		    int f1time = directFlightQueryResult.getInt("f1_actual_time");
-		    int f1capacity = directFlightQueryResult.getInt("f1_capacity");
-		    int f1price = directFlightQueryResult.getInt("f1_price");
+		    int f1fid = directFlightQueryResult.getInt("fid");
+		    int f1dayOfMonth = directFlightQueryResult.getInt("day_of_month");
+		    String f1carrierId = directFlightQueryResult.getString("carrier_id");
+		    String f1flightNum = directFlightQueryResult.getString("flight_num");
+		    String f1originCity = directFlightQueryResult.getString("origin_city");
+		    String f1destCity = directFlightQueryResult.getString("dest_city");
+		    int f1time = directFlightQueryResult.getInt("actual_time");
+		    int f1capacity = directFlightQueryResult.getInt("capacity");
+		    int f1price = directFlightQueryResult.getInt("price");
 
 		    // Use the information to create a new flight.
 		    Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
