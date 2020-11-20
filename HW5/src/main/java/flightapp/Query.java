@@ -22,6 +22,9 @@ public class Query {
     // Let currentUser be the currently logged in username.
     private String currentUser;
 
+    // Let itineraries maintain the current itinerary search results.
+    private List<Itinerary> itineraries;
+
     // Let the following section contain predefined SQL queries.
 
     // Canned queries
@@ -31,6 +34,14 @@ public class Query {
     // For check dangling
     private static final String TRANCOUNT_SQL = "SELECT @@TRANCOUNT AS tran_count";
     private PreparedStatement tranCountStatement;
+
+    // Used to clear the Users table.
+    private static final String CLEAR_USERS = "DELETE FROM Users;";
+    private PreparedStatement clearUsersStatement;
+
+    // Used to clear the Reservations table.
+    private static final String CLEAR_RESERVATIONS = "DELETE FROM Reservations;";
+    private PreparedStatement clearReservationsStatement;
 
     // Used to check if username already exists
     private static final String CHECK_USERNAME_EXISTS = "SELECT * FROM Users WHERE LOWER(username) = ?;";
@@ -44,19 +55,68 @@ public class Query {
     private static final String USER_LOGIN = "SELECT salt, hash FROM Users WHERE LOWER(username) = ?;";
     private PreparedStatement userLoginStatement;
 
+    // Used to get the top n direct flights from src to dst on a given day in July 2015. 
+    private static final String DIRECT_FLIGHT = "SELECT top(?)"
+					      + "       fid,"  
+					      + "       day_of_month,"
+					      + "       carrier_id,"  
+					      + "       flight_num,"  
+					      + "       origin_city,"  
+					      + "       dest_city,"  
+					      + "       actual_time,"  
+					      + "       capacity,"  
+					      + "       price"  
+					      + "  FROM Flights"
+					      + " WHERE origin_city = ?"
+					      + "   AND dest_city = ?"
+					      + "   AND day_of_month = ?"
+					      + "   AND canceled <> 1"
+					      + " ORDER BY actual_time ASC"
+					      + "   AND fid ASC;";
+    private PreparedStatement directFlightStatement;
+    
+    // Used to get the top one-hop flights from src to dst in a month.
+    private static final String ONE_HOP_FLIGHT = "select TOP(?)"
+					       + "       f1.fid as f1_fid,"  
+					       + "       f1.day_of_month AS f1_day_of_month,"
+					       + "       f1.carrier_id AS f1_carrier_id,"  
+					       + "       f1.flight_num AS f1_flight_num,"  
+					       + "       f1.origin_city AS f1_origin_city,"  
+					       + "       f1.dest_city AS f1_dest_city,"  
+					       + "       f1.actual_time AS f1_actual_time,"  
+					       + "       f1.capacity AS f1_capacity,"  
+					       + "       f1.price AS f1_price,"  
+					       + "       f2.fid AS f2_fid,"  
+					       + "       f2.day_of_month AS f2_day_of_month,"
+					       + "       f2.carrier_id AS f2_carrier_id,"  
+					       + "       f2.flight_num AS f2_flight_num,"  
+					       + "       f2.origin_city AS f2_origin_city,"  
+					       + "       f2.dest_city AS f2_dest_city,"  
+					       + "       f2.actual_time AS f2_actual_time,"  
+					       + "       f2.capacity AS f2_capacity,"  
+					       + "       f2.price AS f2_price"  
+					       + "  FROM flights as f1,"
+					       + "       flights as f2"
+					       + " WHERE f1.origin_city = ?"
+					       + "   AND f2.dest_city = ?"
+					       + "   AND f1.day_of_month = ?"
+					       + "   AND f1.dest_city = f2.origin_city"
+					       + "   AND f1.day_of_month = f2.day_of_month"
+					       + "   AND f1.canceled <> 1"
+					       + "   AND f2.canceled <> 1"
+					       + " ORDER BY (f1.actual_time + f2.actual_time) ASC;";
+    private PreparedStatement oneHopFlightStatement;
+
     public Query() throws SQLException, IOException {
 	this(null, null, null, null);
+	this.itineraries = new ArrayList<>();
+	this.currentUser = null;
     }
 
     protected Query(String serverURL, String dbName, String adminName, String password)
 	throws SQLException, IOException {
 	    conn = serverURL == null ? openConnectionFromDbConn()
-		: openConnectionFromCredential(serverURL, dbName, adminName, password);
-
-	    prepareStatements();
-	}
-
-    /**
+		: openConnectionFromCredential(serverURL, dbName, adminName, password); prepareStatements(); } /**
      * Return a connecion by using dbconn.properties file
      *
      * @throws SQLException
@@ -120,7 +180,15 @@ public class Query {
      */
     public void clearTables() {
 	try {
-	    // TODO: YOUR CODE HERE
+	    // Clear the Users table.
+	    clearUsersStatement.clearParameters();
+	    clearUsersStatement.executeUpdate();
+	    clearUsersStatement.close();
+
+	    // Clear the Reservations table.
+	    clearReservationsStatement.clearParameters();
+	    clearReservationsStatement.executeUpdate();
+	    clearReservationsStatement.close();
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}
@@ -132,11 +200,13 @@ public class Query {
     private void prepareStatements() throws SQLException {
 	checkFlightCapacityStatement = conn.prepareStatement(CHECK_FLIGHT_CAPACITY);
 	tranCountStatement = conn.prepareStatement(TRANCOUNT_SQL);
-	// TODO : YOUR CODE HERE
-
+	clearUsersStatement = conn.prepareStatement(CLEAR_USERS);
+	clearReservationsStatement = conn.prepareStatement(CLEAR_RESERVATIONS);
 	checkUsernameExistsStatement = conn.prepareStatement(CHECK_USERNAME_EXISTS);
 	insertUserDataStatement = conn.prepareStatement(INSERT_USER_DATA);
 	userLoginStatement = conn.prepareStatement(USER_LOGIN);
+	directFlightStatement = conn.prepareStatement(DIRECT_FLIGHT);
+	oneHopFlightStatement = conn.prepareStatement(ONE_HOP_FLIGHT);
     }
 
     /**
@@ -150,7 +220,7 @@ public class Query {
      */
     public String transaction_login(String username, String password) {
 	try {
-	    // We use lowercase username since usernames are case insensitive.
+	    // We use lowercase for name comparisons because username is case insensitive.
 	    String lowercaseUsername = username.toLowerCase();
     
 	    // Prevent the same user from logging in multiple times.
@@ -168,7 +238,7 @@ public class Query {
 		ResultSet rs = userLoginStatement.executeQuery();
 
 		// Only proceed if the query returned a result.
-		if (rs.isBeforeFirst() || lowercaseUsernameQueryResult.getRow() != 0 ) {
+		if (rs.next()) {
 		    // Grab the stored salt.
 		    byte[] salt = rs.getBytes("salt");
 
@@ -191,11 +261,12 @@ public class Query {
 		    // We can log the user in if the hashes are equivalent.
 		    if (Arrays.equals(generatedHash, returnedHash)) {
 			rs.close();
+			// Store the lowercase name to maintain case insensitive username comparisons.
 			this.currentUser = lowercaseUsername;
-			return "Logged in as " + username "\n";
+			return "Logged in as " + username + "\n";
 		    }
 		}
-	    } catch (SQLexception e) {
+	    } catch (SQLException e) {
 		e.printStackTrace();
 	    }
 	    
@@ -231,11 +302,11 @@ public class Query {
 
 	    // Return an error if the query returned any rows
 	    // or if the amount being added to the acount is negative.
-	    if (rs.isBeforeFirst() || usernameQueryResult.getRow() != 0 || initAmount < 0) {
+	    if (rs.next()) {
 		return "Failed to create user\n";
 	    } else {
 		// Remember to close the query connection.
-		rs.close()
+		rs.close();
 	    }
 
 	    // Our inputs were valid.
@@ -314,46 +385,141 @@ public class Query {
     public String transaction_search(String originCity, String destinationCity, boolean directFlight,
 	    int dayOfMonth, int numberOfItineraries) {
 	try {
-	    // WARNING the below code is unsafe and only handles searches for direct flights
-	    // You can use the below code as a starting reference point or you can get rid
-	    // of it all and replace it with your own implementation.
-	    //
-	    // TODO: YOUR CODE HERE
-
 	    StringBuffer sb = new StringBuffer();
-
+	    
+	    // Reinitialize itineraries to an empty list;
+	    itineraries = new ArrayList<>();
+    
 	    try {
-		// one hop itineraries
-		String unsafeSearchSQL = "SELECT TOP (" + numberOfItineraries
-		    + ") day_of_month,carrier_id,flight_num,origin_city,dest_city,actual_time,capacity,price "
-		    + "FROM Flights " + "WHERE origin_city = \'" + originCity + "\' AND dest_city = \'"
-		    + destinationCity + "\' AND day_of_month =  " + dayOfMonth + " "
-		    + "ORDER BY actual_time ASC";
+		// Fill itineraries with flight itineraries.
+		// Get all the direct flights, regardless of directFlight bool value.
 
-		Statement searchStatement = conn.createStatement();
-		ResultSet oneHopResults = searchStatement.executeQuery(unsafeSearchSQL);
+		// Prepare the query.
+		directFlightStatement.clearParameters();
+		directFlightStatement.setInt(1, numberOfItineraries);
+		directFlightStatement.setString(2, originCity);
+		directFlightStatement.setString(3, destinationCity);
+		directFlightStatement.setInt(4, dayOfMonth);
+	
+		// Get the query.	
+		ResultSet directFlightQueryResult = directFlightStatement.executeQuery();
 
-		while (oneHopResults.next()) {
-		    int result_dayOfMonth = oneHopResults.getInt("day_of_month");
-		    String result_carrierId = oneHopResults.getString("carrier_id");
-		    String result_flightNum = oneHopResults.getString("flight_num");
-		    String result_originCity = oneHopResults.getString("origin_city");
-		    String result_destCity = oneHopResults.getString("dest_city");
-		    int result_time = oneHopResults.getInt("actual_time");
-		    int result_capacity = oneHopResults.getInt("capacity");
-		    int result_price = oneHopResults.getInt("price");
+		// For each itinerary in the query, add it to itineraries.
+		while (directFlightQueryResult.next()) {	
+		    // Extract the relevant query information.
+		    // Flight 1 info.
+		    int f1fid = directFlightQueryResult.getInt("f1_fid");
+		    int f1dayOfMonth = directFlightQueryResult.getInt("f1_day_of_month");
+		    String f1carrierId = directFlightQueryResult.getString("f1_carrier_id");
+		    String f1flightNum = directFlightQueryResult.getString("f1_flight_num");
+		    String f1originCity = directFlightQueryResult.getString("f1_origin_city");
+		    String f1destCity = directFlightQueryResult.getString("f1_dest_city");
+		    int f1time = directFlightQueryResult.getInt("f1_actual_time");
+		    int f1capacity = directFlightQueryResult.getInt("f1_capacity");
+		    int f1price = directFlightQueryResult.getInt("f1_price");
 
-		    sb.append("Day: " + result_dayOfMonth + " Carrier: " + result_carrierId + " Number: "
-			    + result_flightNum + " Origin: " + result_originCity + " Destination: "
-			    + result_destCity + " Duration: " + result_time + " Capacity: " + result_capacity
-			    + " Price: " + result_price + "\n");
+		    // Use the information to create a new flight.
+		    Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
+
+		    // Add the flight to an itinerary.
+		    Itinerary itinerary = new Itinerary(flight1, null, f1time, true);
+	
+		    // And add the itinerary to the itinerarys list.
+		    itineraries.add(itinerary);
 		}
-		oneHopResults.close();
+
+		// Finished with the query.
+		directFlightQueryResult.close();
+
+		// Get the number of itineraries currently stored.
+		int currNumItineraries = itineraries.size();
+
+		// Get the number of available spaces for itinerary entries.
+		int numItinerarySpaces = numberOfItineraries - currNumItineraries;
+
+		// If possible, any indirect flight itineraries to itineraries too.	
+		// Can only accept indirect flights if, they are admissible
+		// and there aren't already too many itineraries stored.
+		if (numItinerarySpaces > 0 && directFlight == false) {
+		    // Prepare the query.
+		    oneHopFlightStatement.clearParameters();
+		    oneHopFlightStatement.setInt(1, numItinerarySpaces);
+		    oneHopFlightStatement.setString(2, originCity);
+		    oneHopFlightStatement.setString(3, destinationCity);
+		    oneHopFlightStatement.setInt(4, dayOfMonth);
+
+		    // Get the query.	
+		    ResultSet oneHopFlightQueryResult = oneHopFlightStatement.executeQuery();
+
+		    // For each itinerary in the query, add it to itineraries.
+		    while (oneHopFlightQueryResult.next()) {
+			// Extract the relevant query information.
+			// Flight 1 info.
+			int f1fid = oneHopFlightQueryResult.getInt("f1_fid");
+			int f1dayOfMonth = oneHopFlightQueryResult.getInt("f1_day_of_month");
+			String f1carrierId = oneHopFlightQueryResult.getString("f1_carrier_id");
+			String f1flightNum = oneHopFlightQueryResult.getString("f1_flight_num");
+			String f1originCity = oneHopFlightQueryResult.getString("f1_origin_city");
+			String f1destCity = oneHopFlightQueryResult.getString("f1_dest_city");
+			int f1time = oneHopFlightQueryResult.getInt("f1_actual_time");
+			int f1capacity = oneHopFlightQueryResult.getInt("f1_capacity");
+			int f1price = oneHopFlightQueryResult.getInt("f1_price");
+
+			// Flight 2 info.
+			int f2fid = oneHopFlightQueryResult.getInt("f2_fid");
+			int f2dayOfMonth = oneHopFlightQueryResult.getInt("f2_day_of_month");
+			String f2carrierId = oneHopFlightQueryResult.getString("f2_carrier_id");
+			String f2flightNum = oneHopFlightQueryResult.getString("f2_flight_num");
+			String f2originCity = oneHopFlightQueryResult.getString("f2_origin_city");
+			String f2destCity = oneHopFlightQueryResult.getString("f2_dest_city");
+			int f2time = oneHopFlightQueryResult.getInt("f2_actual_time");
+			int f2capacity = oneHopFlightQueryResult.getInt("f2_capacity");
+			int f2price = oneHopFlightQueryResult.getInt("f2_price");
+
+			// Create the flights from the query info.
+			Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
+			Flight flight2 = new Flight(f2fid, f2dayOfMonth, f2carrierId, f2flightNum, f2originCity, f2destCity, f2time, f2capacity, f2price);
+
+			// Itinerary with multiple flights holds the total flight time.
+			int totalFlightTime = f1time + f2time;
+    
+			// Add the flights to an itinerary.
+			Itinerary itinerary = new Itinerary(flight1, flight2, totalFlightTime, false);
+
+			// And add the itinerary to the itinerarys list.
+			itineraries.add(itinerary);
+		    } 		    
+		    // Finished with the query.
+		    oneHopFlightQueryResult.close();
+
+		    // If indirect flights have been added to itineraries,
+		    // then itineraries needs to be sorted by ascending flight times.
+		    Collections.sort(itineraries);
+		}
+
+	    // Fill the string builder with the ordered itineraries.
+	    int n = itineraries.size();
+	    for (int i = 0; i < n; i++) {
+		sb.append("Itinerary " + i);
+
+		Itinerary itinerary = itineraries.get(i);
+		if (itinerary.isDirectFlight) {
+		    sb.append(": 1 flight(s), " + itinerary.flightTime + " minutes\n" + itinerary.flight1.toString() + "\n"); 
+		} else {
+		    sb.append(": 2 flight(s), " + itinerary.flightTime + " minutes\n" + itinerary.flight1.toString() + "\n" + itinerary.flight2.toString() + "\n");
+		}
+	    }
+	    
+	    // Handle any errors while querying.
 	    } catch (SQLException e) {
 		e.printStackTrace();
 	    }
-
-	    return sb.toString();
+	    
+	    // Return a string message about the query results. 
+	    String output = (sb.length() == 0) ? "No flights match your selection\n" : sb.toString();
+	    return output;
+    
+	// Clean up. 
 	} finally {
 	    checkDanglingTransaction();
 	}
@@ -413,7 +579,7 @@ public class Query {
      * Implements the reservations function.
      *
      * @return If no user has logged in, then return "Cannot view reservations, not logged in\n" If
-     *         the user has no reservations, then return "No reservations found\n" For all other
+     *         the user has no reservations, then return "No reservateons found\n" For all other
      *         errors, return "Failed to retrieve reservations\n"
      *
      *         Otherwise return the reservations in the following format:
@@ -510,11 +676,74 @@ public class Query {
 	public int capacity;
 	public int price;
 
+	/**
+	 * Class constructor.
+	 */
+	public Flight(int fid, int dayOfMonth, String carrierId, String flightNum, String originCity, String destCity,
+		      int time, int capacity, int price) {
+	    this.fid = fid;
+	    this.dayOfMonth = dayOfMonth;
+	    this.carrierId = carrierId;
+	    this.flightNum = flightNum;
+	    this.originCity = originCity;
+	    this.destCity = destCity;
+	    this.time = time;
+	    this.capacity = capacity;
+	    this.price = price;
+	}
+
 	@Override
 	    public String toString() {
 		return "ID: " + fid + " Day: " + dayOfMonth + " Carrier: " + carrierId + " Number: "
 		    + flightNum + " Origin: " + originCity + " Dest: " + destCity + " Duration: " + time
 		    + " Capacity: " + capacity + " Price: " + price;
 	    }
+    }
+
+    /**
+     * A class to store itinerary information.
+     */
+    class Itinerary implements Comparable<Itinerary> {
+	public Flight flight1;
+	public Flight flight2;
+	public int flightTime;
+	public boolean isDirectFlight;
+
+	/**
+	 * Class constructor.
+	 */
+	public Itinerary(Flight flight1, Flight flight2, int flightTime, boolean isDirectFlight) {
+	    this.flight1 = flight1;
+	    this.flight2 = flight2;
+	    this.flightTime = flightTime;
+	    this.isDirectFlight = isDirectFlight;
+	}
+
+	@Override
+	/**
+	 * Provides for sort between Itineraries.
+	 */
+	public int compareTo(Itinerary other) {
+	    // Order by flight time.
+	    if (this.flightTime != other.flightTime) {
+		return Integer.compare(this.flightTime, other.flightTime);
+	    }
+
+	    // Break flight time ties with first flight id.
+	    if (this.flight1.fid != other.flight1.fid) {
+		return Integer.compare(this.flight1.fid, other.flight1.fid);
+	    }
+
+	    // Break first flight id ties with second flight id. 
+	    // (Only if both have second flight ids).
+	    if (!(this.isDirectFlight || other.isDirectFlight)) {
+		return Integer.compare(this.flight2.fid, other.flight2.fid);
+	    }
+
+	    // If only one itinerary has a second flight,
+	    // the itinerary with the direct flight is ordered first. 
+	    int comparison = (this.isDirectFlight) ? -1 : 1;
+	    return comparison;
+	}
     }
 }
