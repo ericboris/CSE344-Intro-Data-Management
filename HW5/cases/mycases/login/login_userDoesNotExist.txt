@@ -1,0 +1,11 @@
+# Login with a user that doesn't exist yet.
+# Let user be the user that doesn't exist
+login user user
+quit
+*
+#
+# Expected printout
+#
+Login failed
+Goodbye
+*%

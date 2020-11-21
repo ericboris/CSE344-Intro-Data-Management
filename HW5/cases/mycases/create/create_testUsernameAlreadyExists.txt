@@ -1,0 +1,17 @@
+# Try to create a username that already exists.
+# Expect an error.
+# Let username be the username being created.
+#
+create username username 100
+login username username
+create username username 100
+quit
+*
+#
+# Expected printout for username
+#
+Created user username
+Logged in as username
+Failed to create user
+Goodbye
+*%

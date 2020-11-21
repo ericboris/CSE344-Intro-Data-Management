@@ -1,0 +1,22 @@
+-- DONE
+create: 	create a user (no error)
+		create user with negative dollar
+
+login:		login with different user
+		login a single user (no error)
+		login with wrong password
+
+search: 	direct flight (no error)
+		top n with result less than n (no error)
+		top n with result greater than n (no error)
+
+-- TODO
+create:		negative dollar
+		username already exists
+		case sensitivity
+
+login:		multiple login (same user)
+		multiple login (different user)
+		login user doesn't exist
+
+search:		

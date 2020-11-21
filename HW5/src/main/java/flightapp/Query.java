@@ -75,7 +75,7 @@ public class Query {
 					      + "       fid ASC;";
     private PreparedStatement directFlightStatement;
     
-    // Used to get the top one-hop flights from src to dst in a month.
+    // Used to get the top one-hop flights from src to dst on a given day in July 2015.
     private static final String ONE_HOP_FLIGHT = "select TOP(?)"
 					       + "       f1.fid as f1_fid,"  
 					       + "       f1.day_of_month AS f1_day_of_month,"
@@ -313,10 +313,10 @@ public class Query {
 	    // or if the amount being added to the acount is negative.
 	    if (rs.next() || initAmount < 0) {
 		return "Failed to create user\n";
-	    } else {
-		// Remember to close the query connection.
-		rs.close();
 	    }
+
+	    // Remember to close the query connection.
+	    rs.close();
 
 	    // Our inputs were valid.
 	    // And we can add the new user to the table.
@@ -452,6 +452,7 @@ public class Query {
 		if (numItinerarySpaces > 0 && directFlight == false) {
 		    // Prepare the query.
 		    oneHopFlightStatement.clearParameters();
+
 		    oneHopFlightStatement.setInt(1, numItinerarySpaces);
 		    oneHopFlightStatement.setString(2, originCity);
 		    oneHopFlightStatement.setString(3, destinationCity);
@@ -498,6 +499,7 @@ public class Query {
 			// And add the itinerary to the itinerarys list.
 			itineraries.add(itinerary);
 		    } 		    
+
 		    // Finished with the query.
 		    oneHopFlightQueryResult.close();
 
@@ -730,7 +732,7 @@ public class Query {
 
 	@Override
 	/**
-	 * Provides for sort between Itineraries.
+	 * Provides a method for sorting Itineraries.
 	 */
 	public int compareTo(Itinerary other) {
 	    // Order by flight time.

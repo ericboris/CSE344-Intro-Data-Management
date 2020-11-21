@@ -1,0 +1,18 @@
+# Test case insensitivity.
+# Create same user twice with usernames in different cases.
+# Expect an error on second create statement.
+# Let username and USERNAME be the usernames that are identical except for case.
+#
+create username username 100
+login username username
+create USERNAME USERNAME 100
+quit
+*
+# 
+# Expected printout for username creation.
+#
+Created user username
+Logged in as username
+Failed to create user
+Goodbye
+*%
