@@ -89,8 +89,6 @@ public class Query {
 					       + "       f2.fid AS f2_fid,"  
 					       + "       f2.day_of_month AS f2_day_of_month,"
 					       + "       f2.carrier_id AS f2_carrier_id,"  
-					       + "       f2.flight_num AS f2_flight_num,"  
-					       + "       f2.origin_city AS f2_origin_city,"  
 					       + "       f2.dest_city AS f2_dest_city,"  
 					       + "       f2.actual_time AS f2_actual_time,"  
 					       + "       f2.capacity AS f2_capacity,"  
@@ -108,6 +106,22 @@ public class Query {
 					       + "       f1.fid,"
 					       + "       f2.fid;";
     private PreparedStatement oneHopFlightStatement;
+
+    // Get a user's reservations on a given day.
+    private static final String USER_RESERVATIONS_ON_DAY = "SELECT COUNT(*) as count"
+							 + "  FROM Flights AS f,"
+							 + "       (SELECT fid1"
+							 + "          FROM Reservations"
+							 + "         WHERE username = ?) AS r"
+							 + " WHERE r.fid1 = f.fid"
+							 + "   AND f.day_of_month = ?;"; 
+    private PreparedStatement userReservationsOnDayStatement;
+
+    // Get the number of booked seats on a given flight.
+    private static final String BOOKED_SEATS_ON_FLIGHT = "SELECT seats"
+						       + "  FROM BookedSeats"
+						       + " WHERE fid = ?;";
+    private PreparedStatement bookedSeatsOnFlightStatement;
 
     /**
      * Class constructor.
@@ -216,6 +230,8 @@ public class Query {
 	userLoginStatement = conn.prepareStatement(USER_LOGIN);
 	directFlightStatement = conn.prepareStatement(DIRECT_FLIGHT);
 	oneHopFlightStatement = conn.prepareStatement(ONE_HOP_FLIGHT);
+	userReservationsOnDayStatement = conn.prepareStatement(USER_RESERVATIONS_ON_DAY);
+	bookedSeatsOnFlightStatement = conn.prepareStatement(BOOKED_SEATS_ON_FLIGHT);
     }
 
     /**
@@ -270,6 +286,9 @@ public class Query {
 		    // We can log the user in if the hashes are equivalent.
 		    if (Arrays.equals(generatedHash, returnedHash)) {
 			rs.close();
+			// Clear any existing itineraries for the new user.
+			this.itineraries = new ArrayList<>();
+
 			// Store the lowercase name to maintain case insensitive username comparisons.
 			this.currentUser = username;
 			return "Logged in as " + username + "\n";
@@ -401,7 +420,7 @@ public class Query {
     
 	    try {
 		// Fill itineraries with flight itineraries.
-		// Get all the direct flights, regardless of directFlight bool value.
+		// Get all the direct flights, regardless of directFlight boolean value.
 
 		// Prepare the query.
 		directFlightStatement.clearParameters();
@@ -511,6 +530,7 @@ public class Query {
 	    // Fill the string builder with the ordered itineraries.
 	    int n = itineraries.size();
 	    for (int i = 0; i < n; i++) {
+		// Give each itinerary a unique number from 0 to n.
 		sb.append("Itinerary " + i);
 
 		Itinerary itinerary = itineraries.get(i);
@@ -553,10 +573,156 @@ public class Query {
      *         where reservationId is a unique number in the reservation system that starts from 1 and
      *         increments by 1 each time a successful reservation is made by any user in the system.
      */
-    public String transaction_book(int itineraryId) {
+    public String transaction_book(int itineraryId) { // currenthead
 	try {
-	    // TODO: YOUR CODE HERE
-	    return "Booking failed\n";
+	    // A user must be logged in to book.
+	    if (this.currentUser == null) {
+		return "Cannot book reservations, not logged in\n";
+	    }
+
+	    // The user must have performed a search in the current session
+	    // and the itinerary id must be a valid itinerary in that search.
+	    if (this.itineraries.size() == 0 || itineraryId < 0 || this.itineraries.size() <= itineraryId) {
+		return "No such itinerary " + itineraryId + "\n";
+	    }
+	  
+	    // Let itinerary be a convenience variable since it will be accessed numerous times.
+	    Itinerary itinerary = itineraries.get(itineraryId);
+
+	    // The user cannot book multiple flights on the same day. 
+	    // Let itineraryDay be the day of the month that the user is trying to book.
+	    int itineraryDay = itinerary.flight1.dayOfMonth;
+
+	    // Query the reservations table for any flights by the user on itineraryDay.
+	    try {
+		userReservationsOnDayStatement.clearParameters();
+		
+		userReservationsOnDayStatement.setString(1, this.currentUser);
+		userReservationsOnDayStatement.setInt(2, itineraryDay);
+
+		ResultSet userReservationsResult = userReservationsOnDayStatement.executeQuery();
+
+		// Let count be the number of reservations the user for the day.
+		int count = userReservationsResult.getInt("count");
+
+		// Can't have multiple flights booked on a single day.
+		if (count > 0) {
+		    return "You cannot book two flights in the same day\n";
+		}
+	    } catch (SQLException e) {
+		e.printStackTrace();
+	    }  
+
+	    // The user cannot book if there is insufficient capacity on either flight.
+	    // Get the available seats on the flight1.
+	    int flight1Capacity = itinerary.flight1.capacity;
+	    int flight1Fid = itinerary.flight1.fid;
+
+	    // Query the booked seats table for how many seats are booked on flight1.
+	    int flight1BookedSeats = 0;
+	    try {
+		bookedSeatsOnFlightStatement.clearParameters();
+		bookedSeatsOnFlightStatement.setInt(1, flight1Fid);
+		ResultSet flight1BookedSeatsResult = bookedSeatsOnFlightStatement.executeQuery();
+		flight1BookedSeats = flight1BookedSeatsResult.getInt("seats");
+		flight1BookedSeatsResult.close();
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		return "Booking failed\n";
+	    }
+	    int flight1AvailableSeats = flight1Capacity - flight1BookedSeats;
+
+	    int flight2AvailableSeats = -1;
+	    int flight2BookedSeats = 0;
+	    // If the itinerary has a second flight, get the available seats on flight2.
+	    if (!itinerary.isDirectFlight) {
+		int flight2Capacity = itinerary.flight2.capacity;
+		int flight2Fid = itinerary.flight2.fid;
+
+		// Query the booked seats table for how many seats are booked on flight2;
+		try {
+		    bookedSeatsOnFlightStatement.clearParameters();
+		    bookedSeatsOnFlightStatement.setInt(1, flight2Fid);
+		    ResultSet flight2BookedSeatsResult = bookedSeatsStatement.executeQuery();
+		    flight2BookedSeats = flight2BookedSeatsResult.getInt("seats");
+		    flight2BookedSeatsResult.close();
+		} catch (SQLException e) {
+		    e.printStackTrace();
+		    return "Booking failed\n";
+		}
+
+		flight2AvailableSeats = flight2Capacity - flight2BookedSeats;
+	    }
+	    
+	    
+	    // The user cannot book the flight if there isn't available seating.
+	    if (flight1AvailableSeats == 0 || flight2AvailableSeats == 0) {
+		return "Booking failed\n";
+	    }
+
+	    // The conditions are met and the itinerary can be booked.
+	    // First will need the reservation id.
+
+	    // Handle the special case where the reservation id table hasn't been used and the id value is empty.
+	    try {
+		isReservationIdTableEmptyStatement.clearParameters();
+		ResultSet isReservationIdTableEmptyResult = isReservationIdTableEmptyStatement.executeQuery();
+		int isReservationIdTableEmpty = isReservationIdTableEmptyResult.getInt("count");
+		isReservationIdTableEmptyResult.close();
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		return "Booking failed\n";
+	    }
+
+	    if (isReservationIdTableEmpty == 0) {
+		// Insert the first value into the reservation id table. 
+		seedReservationId.executeUpdate();	
+	    }
+
+	    // Get the reservation id. 
+	    int reservationId = 0;
+	    try {
+		getReservationIdStatement.clearParameters();
+		ResultSet reservationIdResult = getReservationIdStatement.executeQuery();
+		reservationId = reservationIdResult.getInt("id"); 
+		reservationIdResult.close();
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		return "Booking failed\n";
+	    }
+
+	    // Update the reservation id.
+	    incrementReservationIdStatement.executeUpdate(); 
+
+	    // Add the flights in the itinerary to reservations.
+	    // Reservation needs to have: rid, username, price, paid, cancelled, fid1, fid2
+	    // but already have variables for rid, username, fid1, and fid2.
+	    int paid = (itinerary.paid) ? 1 : 0;
+	    int cancelled = (itinerary.cancelled) ? 1 : 0;     	    
+
+	    addNewReservationStatement.setInt(1, reservationId);
+	    addNewReservationStatement.setString(2, this.currentUser);
+	    addNewReservationStatement.setInt(3, itinerary.price);
+	    addNewReservationStatement.setInt(4, paid);
+	    addNewReservationStatement.setInt(5, cancelled);
+	    addNewReservationStatement.setInt(6, flight1Fid);
+	    addNewReservationStatement.setInt(7, itinerary.flight2.fid);
+	    
+	    addNewReservationStatement.executeUpdate();
+
+	    // Update the booked seats on the flight(s) in the itinerary.
+	    incrementFlightBookedSeatsStatement.clearParameters();
+	    incrementFlightBookedSeatsStatement.setInt(1, flight1Fid);
+	    incrementFlightBookedSeatsStatement.executeUpdate();
+
+	    if (!itinerary.isDirectFlight) {
+		incrementFlightBookedSeatsStatement.clearParameters();
+		incrementFlightBookedSeatsStatement.setInt(1, itinerary.flight2.fid);
+		incrementFlightBookedSeatsStatement.executeUpdate();
+	    }
+
+	    // If everything has worked then notify that the booking was successful.
+	    return "Booked flight(s), reservation ID: " + reservationId + "\n";
 	} finally {
 	    checkDanglingTransaction();
 	}
@@ -719,6 +885,9 @@ public class Query {
 	public Flight flight2;
 	public int flightTime;
 	public boolean isDirectFlight;
+	public int price;
+	public boolean paid;
+	public boolean cancelled;
 
 	/**
 	 * Class constructor.
@@ -728,6 +897,9 @@ public class Query {
 	    this.flight2 = flight2;
 	    this.flightTime = flightTime;
 	    this.isDirectFlight = isDirectFlight;
+	    this.price = (isDirectFlight) ? flight1.price : flight1.price + flight2.price;
+	    this.paid = false;
+	    this.cancelled = false;
 	}
 
 	@Override
