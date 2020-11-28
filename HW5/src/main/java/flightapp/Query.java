@@ -43,8 +43,12 @@ public class Query {
     private static final String CLEAR_RESERVATIONS = "DELETE FROM Reservations;";
     private PreparedStatement clearReservationsStatement;
 
+    // Used to clear the BookedSeats table.
+    private static final String CLEAR_BOOKED_SEATS = "DELETE FROM BookedSeats;";
+    private PreparedStatement clearBookedSeatsStatement;
+
     // Used to check if username already exists
-    private static final String CHECK_USERNAME_EXISTS = "SELECT * FROM Users WHERE LOWER(username) = ?;";
+    private static final String CHECK_USERNAME_EXISTS = "SELECT * FROM Users WHERE username = ?;";
     private PreparedStatement checkUsernameExistsStatement;
 
     // Used to add a new user to the Users table.
@@ -106,28 +110,6 @@ public class Query {
 					       + "       f2.fid;";
     private PreparedStatement oneHopFlightStatement;
 
-    // Return whether the ReservationId table has been initialized with a value, 1 if it has and 0 otherwise.
-    private static final String IS_RESERVATION_ID_EMPTY = "SELECT COUNT(*) AS count"
-							      + "  FROM ReservationId;";
-    private PreparedStatement isReservationIdEmptyStatement;
-
-    // Initialize the ReservationId table with a ReservationId of 1.
-    private static final String SEED_RESERVATION_ID = "INSERT INTO ReservationId"
-						    + "VALUES (1);";
-    private PreparedStatement seedReservationIdStatement;   
- 
-    // Get the current ReservationId.
-    /*
-    private static final String GET_RESERVATION_ID = "SELECT id"
-						   + "  FROM ReservationId;";
-    private PreparedStatement getReservationIdStatement;
-    */
-
-    // Increment the ReservationId.
-    private static final String INCREMENT_RESERVATION_ID = "UPDATE ReservationId"
-							 + "   SET id = id + 1;";
-    private PreparedStatement incrementReservationIdStatement;
-
     // Add a new Reservation to the Reservations table.
     private static final String ADD_RESERVATION = "INSERT INTO Reservations"
 						    + " VALUES (?, ?, ?, ?, ?, ?);";  
@@ -144,6 +126,7 @@ public class Query {
     private PreparedStatement getReservationIdStatement;
 
     // Get a user's reservations on a given day.
+    /*
     private static final String GET_USER_RESERVATIONS_ON_DAY = "SELECT COUNT(*) AS count"
 							 + "  FROM Flights AS f,"
 							 + "       (SELECT fid1"
@@ -151,18 +134,16 @@ public class Query {
 							 + "         WHERE username = ?) AS r"
 							 + " WHERE r.fid1 = f.fid"
 							 + "   AND f.day_of_month = ?;"; 
+    */
+    private static final String GET_USER_RESERVATIONS_ON_DAY = "SELECT *"
+							 + "  FROM Flights AS f,"
+							 + "       (SELECT fid1"
+							 + "          FROM Reservations"
+							 + "         WHERE username = ?) AS r"
+							 + " WHERE r.fid1 = f.fid"
+							 + "   AND f.day_of_month = ?;"; 
+
     private PreparedStatement getUserReservationsOnDayStatement;
-
-    // Return whether a given flight has any booked seats, 1 if it has and 0 otherwise.
-    private static final String ARE_FLIGHTS_SEATS_BOOKED = "SELECT COUNT(*) AS count"
-							 + "  FROM BookedSeats"
-							 + " WHERE fid = ?;";
-    private PreparedStatement areFlightsSeatsBookedStatement;
-
-    // Initialize the given flight to have 0 booked seats.
-    private static final String SEED_FLIGHTS_BOOKED_SEATS = "INSERT INTO BookedSeats"
-							  + "VALUES (0)";
-    private PreparedStatement seedFlightsBookedSeatsStatement;
 
     // Get the number of booked seats on a given flight.
     private static final String GET_FLIGHTS_BOOKED_SEATS = "SELECT seats"
@@ -175,6 +156,52 @@ public class Query {
 							       + "   SET seats = seats + 1"
 							       + " WHERE fid = ?;";
     private PreparedStatement incrementFlightsBookedSeatsStatement;
+
+    // Return whether the given username booked the given reservation.
+    private static final String DID_USER_BOOK_RESERVATION = "SELECT username"
+							  + "  FROM Reservations"
+							  + " WHERE id = ?;";
+							 // + "   AND username = ?" // TODO Uncomment
+							 // + "   AND paid = 0"
+							 // + "   AND cancelled = 0;";
+    private PreparedStatement didUserBookReservationStatement;
+
+    // Return the attribute for the given reservationId.
+    private static final String GET_RESERVATION_ATTRIBUTE = "SELECT ?"
+							  + "  FROM Reservations"
+							  + " WHERE id = ?;";
+    private PreparedStatement getReservationAttributeStatement;
+    
+    // Update the attribute for the given reservationId with the given value.
+    private static final String UPDATE_RESERVATION_ATTRIBUTE = "UPDATE Reservations"
+							     + "   SET ? = ?"
+							     + " WHERE id = ?"; 
+    private PreparedStatement updateReservationAttributeStatement;
+
+    // Return the attribute for the given username.
+    private static final String GET_USER_ATTRIBUTE = "SELECT ?"
+						   + "  FROM Users"
+						   + " WHERE username = ?;";
+    private PreparedStatement getUserAttributeStatement;
+    
+    // Update the attribute for the given username with the given value.
+    private static final String UPDATE_USER_ATTRIBUTE = "UPDATE Users"
+						      + "   SET ? = ?"
+						      + " WHERE username = ?"; 
+    private PreparedStatement updateUserAttributeStatement;
+
+    // Get reservation cost TODO clarify description
+    private static final String GET_RESERVATION_PRICE = "Select price"
+						      + "FROM Reservations"
+						      + "WHERE id = ?;";
+    private PreparedStatement getReservationPriceStatement;
+
+    // Get the given user's reservations.
+    private static final String GET_USER_RESERVATIONS = "Select *"
+						       + "FROM Reservations"
+						       + "WHERE username = ?"
+						       + " AND cancelled = 0;";
+    private PreparedStatement getUserReservationsStatement;
 
     /**
      * Class constructor.
@@ -257,14 +284,13 @@ public class Query {
     public void clearTables() {
 	try {
 	    // Clear the Users table.
-	    clearUsersStatement.clearParameters();
 	    clearUsersStatement.executeUpdate();
-	    clearUsersStatement.close();
 
 	    // Clear the Reservations table.
-	    clearReservationsStatement.clearParameters();
 	    clearReservationsStatement.executeUpdate();
-	    clearReservationsStatement.close();
+
+	    // Clear the Booked Seats table.
+	    clearBookedSeatsStatement.executeUpdate();
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}
@@ -278,22 +304,24 @@ public class Query {
 	tranCountStatement = conn.prepareStatement(TRANCOUNT_SQL);
 	clearUsersStatement = conn.prepareStatement(CLEAR_USERS);
 	clearReservationsStatement = conn.prepareStatement(CLEAR_RESERVATIONS);
+	clearBookedSeatsStatement = conn.prepareStatement(CLEAR_BOOKED_SEATS);
 	checkUsernameExistsStatement = conn.prepareStatement(CHECK_USERNAME_EXISTS);
 	insertUserDataStatement = conn.prepareStatement(INSERT_USER_DATA);
 	userLoginStatement = conn.prepareStatement(USER_LOGIN);
 	directFlightStatement = conn.prepareStatement(DIRECT_FLIGHT);
 	oneHopFlightStatement = conn.prepareStatement(ONE_HOP_FLIGHT);
-	isReservationIdEmptyStatement = conn.prepareStatement(IS_RESERVATION_ID_EMPTY);
-	seedReservationIdStatement = conn.prepareStatement(SEED_RESERVATION_ID);
-	//	getReservationIdStatement = conn.prepareStatement(GET_RESERVATION_ID);
-	incrementReservationIdStatement = conn.prepareStatement(INCREMENT_RESERVATION_ID);
 	addReservationStatement = conn.prepareStatement(ADD_RESERVATION);
 	getUserReservationsOnDayStatement = conn.prepareStatement(GET_USER_RESERVATIONS_ON_DAY);
-	areFlightsSeatsBookedStatement = conn.prepareStatement(ARE_FLIGHTS_SEATS_BOOKED);
-	seedFlightsBookedSeatsStatement = conn.prepareStatement(SEED_FLIGHTS_BOOKED_SEATS);
 	getFlightsBookedSeatsStatement = conn.prepareStatement(GET_FLIGHTS_BOOKED_SEATS);
 	incrementFlightsBookedSeatsStatement = conn.prepareStatement(INCREMENT_FLIGHTS_BOOKED_SEATS);
 	getReservationIdStatement = conn.prepareStatement(GET_RESERVATION_ID);
+	didUserBookReservationStatement = conn.prepareStatement(DID_USER_BOOK_RESERVATION);
+	getReservationAttributeStatement = conn.prepareStatement(GET_RESERVATION_ATTRIBUTE);
+	updateReservationAttributeStatement = conn.prepareStatement(UPDATE_RESERVATION_ATTRIBUTE);
+	getUserAttributeStatement = conn.prepareStatement(GET_USER_ATTRIBUTE);
+	updateUserAttributeStatement = conn.prepareStatement(UPDATE_USER_ATTRIBUTE);
+	getReservationPriceStatement = conn.prepareStatement(GET_RESERVATION_PRICE);
+	getUserReservationsStatement = conn.prepareStatement(GET_USER_RESERVATIONS);
     }
 
     /**
@@ -382,54 +410,17 @@ public class Query {
 	try {
 	    // Verify that the username doesn't alredy exist
 	    // and that the initAmount is valid.
-
-	    // Prepare the username statement.
-	    checkUsernameExistsStatement.clearParameters();
-	    checkUsernameExistsStatement.setString(1, username.toLowerCase());
-
-	    // Query the Users table for any usernames matching username.
-	    ResultSet rs = checkUsernameExistsStatement.executeQuery();
-
-	    // Return an error if the query returned any rows
-	    // or if the amount being added to the acount is negative.
-	    if (rs.next() || initAmount < 0) {
+	    boolean usernameExists = isUsernameTaken(username);
+	    if (usernameExists || initAmount < 0) {
 		return "Failed to create user\n";
 	    }
+	   
+	    // Salt and hash the password. 
+	    byte[] salt = getSalt();
+	    byte[] hash = getHash(password, salt);
 
-	    // Remember to close the query connection.
-	    rs.close();
-
-	    // Our inputs were valid.
-	    // And we can add the new user to the table.
-	    // But first, encrypt the password.
-
-	    // Generate a random crypographic salt.
-	    SecureRandom random = new SecureRandom();
-	    byte[] salt = new byte[16];
-	    random.nextBytes(salt);
-
-	    // Specify the hash parameters.
-	    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
-
-	    // Generate the hash.
-	    SecretKeyFactory factory = null;
-	    byte[] hash = null;
-	    try {
-		factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-		hash = factory.generateSecret(spec).getEncoded();
-	    } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
-		throw new IllegalStateException();
-	    }
-
-	    // With the data prepared, insert the user data into the table.
-	    insertUserDataStatement.clearParameters();
-
-	    insertUserDataStatement.setString(1, username);
-	    insertUserDataStatement.setBytes(2, salt);
-	    insertUserDataStatement.setBytes(3, hash);
-	    insertUserDataStatement.setInt(4, initAmount);
-
-	    insertUserDataStatement.executeUpdate();
+	    // Add a new user to the Users table.
+	    addUser(username, salt, hash, initAmount);
 
 	    // Notify that the insertion was successful.
 	    return "Created user " + username + "\n";
@@ -441,6 +432,77 @@ public class Query {
 	    checkDanglingTransaction();
 	}
     }
+
+    /**
+     * TODO
+     */
+    private boolean isUsernameTaken(String username) throws SQLException {
+	try {
+	    checkUsernameExistsStatement.clearParameters();
+	    checkUsernameExistsStatement.setString(1, username.toLowerCase());
+
+	    ResultSet checkUsernameExistsResult = checkUsernameExistsStatement.executeQuery();
+
+	    if (checkUsernameExistsResult.next()) {
+		return true;
+	    } else {
+		return false;
+	    }
+	} catch (SQLException e) {
+	    throw e;
+	}
+    }
+
+    /**
+     * TODO
+     */
+    private boolean addUser(String username, byte[] salt, byte[] hash, int amount) throws SQLException {
+	try {
+	    insertUserDataStatement.clearParameters();
+	    insertUserDataStatement.setString(1, username.toLowerCase());
+	    insertUserDataStatement.setBytes(2, salt);
+	    insertUserDataStatement.setBytes(3, hash);
+	    insertUserDataStatement.setInt(4, amount);
+
+	    insertUserDataStatement.executeUpdate();
+	    
+	    return true;
+	} catch (SQLException e) {
+	    throw e;
+	}
+    }
+
+    /**
+     * TODO
+     */
+    private byte[] getSalt() {
+	// Generate a random crypographic salt.
+	SecureRandom random = new SecureRandom();
+	byte[] salt = new byte[16];
+	random.nextBytes(salt);
+	return salt;
+    }
+
+    /**
+     * TODO
+     */
+    private byte[] getHash(String password, byte[] salt) {
+	// Specify the hash parameters.
+	KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
+
+	// Generate the hash.
+	SecretKeyFactory factory = null;
+	try {
+	    factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+	    return factory.generateSecret(spec).getEncoded();
+	} catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
+	    throw new IllegalStateException();
+	}
+    }
+
+
+
+
 
     /**
      * Implement the search function.
@@ -654,53 +716,18 @@ public class Query {
 	    // The user cannot book multiple flights on the same day. 
 	    // Let itineraryDay be the day of the month that the user is trying to book.
 	    int itineraryDay = itinerary.flight1.dayOfMonth;
+	    boolean userHasReservationOnDay = doesUserHaveReservationOnDay(this.currentUser, itineraryDay);
+	    if (userHasReservationOnDay) {
+		return "You cannot book two flights in the same day\n";
+	    }
+	    
 
-	    // Query the reservations table for any flights by the user on itineraryDay.
-	    try {
-		getUserReservationsOnDayStatement.clearParameters();
-		
-		getUserReservationsOnDayStatement.setString(1, this.currentUser);
-		getUserReservationsOnDayStatement.setInt(2, itineraryDay);
-
-		ResultSet userReservationsResult = getUserReservationsOnDayStatement.executeQuery();
-		int count = -1;
-		// Let count be the number of reservations the user for the day.
-		if (userReservationsResult.next()) {
-		    count = userReservationsResult.getInt("count");
-		}
-
-		// Can't have multiple flights booked on a single day.
-		if (count > 0) {
-		    return "You cannot book two flights in the same day\n";
-		}
-	    } catch (SQLException e) {
-		e.printStackTrace();
-	    }  
 
 	    // The user cannot book if there is insufficient capacity on either flight.
 
 	    // Get the available seats on the flight1.
 	    int flight1Capacity = itinerary.flight1.capacity;
 	    int flight1Fid = itinerary.flight1.fid;
-
-	    /*
-	    // Handle the special case where no seats have been booked on flight1.
-	    try {
-		ResultSet areFlightsSeatsBookedResult = areFlightsSeatsBookedStatement.executeQuery();
-		System.out.println(areFlightsSeatsBookedResult);
-		areFlightsSeatsBookedResult.close();
-	    } catch (SQLException e) {
-		System.out.println("The result set has no current row, failed check");
-		try {
-		    // seedFlightsBookedSeatsStatement.clearParameters();
-		    // seedFlightsBookedSeatsStatement.setInt(1, flight1Fid);
-		    seedFlightsBookedSeatsStatement.executeUpdate();
-		} catch (SQLException ee) {
-		    ee.printStackTrace();
-		    System.out.println("failed to seed flight1 booked seats query");
-		    return "Booking failed\n";
-		}
-	    } */
 
 	    // Query the booked seats table for how many seats are booked on flight1.
 	    int flight1BookedSeats = 0;
@@ -721,6 +748,7 @@ public class Query {
 
 	    int flight2AvailableSeats = -1;
 	    int flight2BookedSeats = 0;
+
 	    // If the itinerary has a second flight, get the available seats on flight2.
 	    if (!itinerary.isDirectFlight) {
 		int flight2Capacity = itinerary.flight2.capacity;
@@ -742,7 +770,6 @@ public class Query {
 		flight2AvailableSeats = flight2Capacity - flight2BookedSeats;
 	    }
 	    
-	    
 	    // The user cannot book the flight if there isn't available seating.
 	    if (flight1AvailableSeats == 0 || flight2AvailableSeats == 0) {
 		System.out.println("insufficient seating");
@@ -750,74 +777,21 @@ public class Query {
 	    }
 
 	    // The conditions are met and the itinerary can be booked.
-	    // First will need the reservation id.
-
-	    // Handle the special case where the reservation id table hasn't been used and the id value is empty.
-	    /*
-	    int isReservationIdEmpty = -1;
-	    try {
-		ResultSet isReservationIdEmptyResult = isReservationIdEmptyStatement.executeQuery();
-		if (isReservationIdEmptyResult.next()) {
-		    isReservationIdEmpty = isReservationIdEmptyResult.getInt("count");
-		}
-		isReservationIdEmptyResult.close();
-	    } catch (SQLException e) {
-		e.printStackTrace();
-		System.out.println("failed is reservation id empty query");
-		return "Booking failed\n";
-	    }
-
-	    if (isReservationIdEmpty == 0) {
-		// Insert the first value into the reservation id table. 
-		try {
-		    seedReservationIdStatement.executeUpdate();	
-		} catch (SQLException e) {
-		    e.printStackTrace();
-		    System.out.println("failed seed reservation id query");
-		    return "Booking failed\n";   
-		}
-	    }*/
-
-	    /*
-	    // Get the reservation id. 
-	    int reservationId = 0;
-	    try {
-		ResultSet getReservationIdResult = getReservationIdStatement.executeQuery();
-		reservationId = getReservationIdResult.getInt("id"); 
-		getReservationIdResult.close();
-	    } catch (SQLException e) {
-		e.printStackTrace();
-		System.out.println("failed get reservation id query");
-		return "Booking failed\n";
-	    }
-
-	    // Update the reservation id.
-	    try {
-		incrementReservationIdStatement.executeUpdate(); 
-	    } catch (SQLException e) {
-		e.printStackTrace();
-		System.out.println("failed increment reservation id query");
-		return "Booking failed\n";   
-	    }
-	    */
 
 	    // Add the flights in the itinerary to reservations.
 	    // Reservation needs to have: rid, username, price, paid, cancelled, fid1, fid2
 	    // but already have variables for rid, username, fid1, and fid2.
 	    int paid = (itinerary.paid) ? 1 : 0;
 	    int cancelled = (itinerary.cancelled) ? 1 : 0;     	    
-	    // int fid2 = (itinerary.flight2 != null) ? itinerary.flight2.fid : null;
 
 	    try {
 		addReservationStatement.clearParameters();	
 	
-	    //	addReservationStatement.setInt(1, reservationId);
 		addReservationStatement.setString(1, this.currentUser);
 		addReservationStatement.setInt(2, itinerary.price);
 		addReservationStatement.setInt(3, paid);
 		addReservationStatement.setInt(4, cancelled);
 		addReservationStatement.setInt(5, flight1Fid);
-		// addReservationStatement.setInt(6, fid2);
 
 		if (!itinerary.isDirectFlight) {
 		    addReservationStatement.setInt(6, itinerary.flight2.fid);
@@ -849,8 +823,14 @@ public class Query {
 		return "Booking failed\n";   
 	    }
 
-	    // If everything has worked then notify that the booking was successful.
-	    // TODO update reservation id
+	    boolean userHasReservation = doesUserHaveReservation(this.currentUser);
+	    if (userHasReservation) {
+		System.out.println("USER HAS RESERVATION");
+	    } else {
+		System.out.println("USER HAS NO RESERVATION");
+	    }
+
+	    // Get the reservation id that was just created.
 	    int reservationId = -1;
 	    try {
 		getReservationIdStatement.clearParameters();
@@ -861,13 +841,6 @@ public class Query {
 		getReservationIdStatement.setInt(4, cancelled);
 		getReservationIdStatement.setInt(5, flight1Fid);
 	   
-		/* 
-		if (!itinerary.isDirectFlight) {
-		    getReservationIdStatement.setInt(6, itinerary.flight2.fid);
-		} else {
-		    getReservationIdStatement.setNull(6, Types.INTEGER);
-		} */  
- 
 		ResultSet getReservationIdResult = getReservationIdStatement.executeQuery();
 	    
 		if (getReservationIdResult.next()) {
@@ -881,9 +854,42 @@ public class Query {
 		return "Booking failed\n";
 	    }
 
+	    // If everything has worked then notify that the booking was successful.
 	    return "Booked flight(s), reservation ID: " + reservationId + "\n";
 	} finally {
 	    checkDanglingTransaction();
+	}
+    }
+
+    /**
+     * TODO
+     */
+    private boolean doesUserHaveReservationOnDay(String username, int itineraryDay) {
+	// Query the reservations table for any flights by the user on itineraryDay.
+	try {
+	    getUserReservationsOnDayStatement.clearParameters();
+
+	    getUserReservationsOnDayStatement.setString(1, this.currentUser);
+	    getUserReservationsOnDayStatement.setInt(2, itineraryDay);
+
+	    ResultSet userReservationsResult = getUserReservationsOnDayStatement.executeQuery();
+	    //int count = -1;
+	    // Let count be the number of reservations the user for the day.
+	    if (userReservationsResult.next()) {
+		//count = userReservationsResult.getInt("count");
+		System.out.println("user has reservation");
+		return true;
+	    } else {
+		return false;
+		/*
+		// Can't have multiple flights booked on a single day.
+		if (count > 0) {
+		return "You cannot book two flights in the same day\n";
+		} */
+	    }
+	} catch (SQLException e) {
+	    //e.printStackTrace();
+	    return false;
 	}
     }
 
@@ -904,10 +910,254 @@ public class Query {
      */
     public String transaction_pay(int reservationId) {
 	try {
-	    // TODO: YOUR CODE HERE
-	    return "Failed to pay for reservation " + reservationId + "\n";
-	} finally {
+	    // A user must be logged in to pay.
+	    if (this.currentUser == null) {
+		return "Cannot pay, not logged in\n";
+	    }
+
+	    // The current user must have booked the reservationId.
+	    if (!userBookedReservationId(reservationId)) {
+		return "Cannot find unpaid reservation " + reservationId + " under user: " + this.currentUser + "\n";
+	    }  
+
+	    //int reservationPrice = getReservationAttribute(reservationId, "price");
+	    int reservationPrice = getReservationPrice(reservationId);
+	    int userBalance = getUserAttribute(this.currentUser, "balance");
+	    System.out.println("reservationPrice: " + reservationPrice);
+	    System.out.println("userBalance:      " + userBalance);
+
+	    // The current user must have enough funds in their account to pay for the reservation.
+	    int newUserBalance = reservationPrice - userBalance;
+	    if (newUserBalance < 0) {
+		return "User has only " + userBalance + " in account but itinerary costs " + reservationPrice + "\n";
+	    }
+
+	    // Pay for the reservation.
+
+	    // Remove the cost of the reservation from the users account.
+	    boolean updateBalanceWasSuccessful = updateUserAttribute(this.currentUser, "balance", newUserBalance);
+	    if (!updateBalanceWasSuccessful) {
+		return "Failed to pay for reservation " + reservationId + "\n";
+	    }
+
+	    // Update the reservation paid attribute to true.
+	    boolean updatePaidWasSuccessful = updateReservationAttribute(reservationId, "paid", "true");
+	    if (!updatePaidWasSuccessful) {
+		return "Failed to pay for reservation " + reservationId + "\n";
+	    }  
+
+	    // The payment was succesful, notify.
+	    return "Paid reservation: " + reservationId + " remaining balance: " + newUserBalance + "\n";
+ 	} finally {
 	    checkDanglingTransaction();
+	}
+    }
+
+    /**
+     * Returns a boolean of whether the currently logged in user booked the given reservationid.
+     * Assumes that a user is currently logged in.
+     *
+     * @param reservationId the reservationId to check against.
+     * 
+     * @return true if the current user booked the given reservationId and false otherwise.
+     */
+    private boolean userBookedReservationId(int reservationId) {
+	try {
+	    didUserBookReservationStatement.clearParameters();
+	    didUserBookReservationStatement.setInt(1, reservationId);
+	    //didUserBookReservationStatement.setString(2, this.currentUser);
+	    ResultSet didUserBookReservationResult = didUserBookReservationStatement.executeQuery();
+	    boolean result = (didUserBookReservationResult.next()) ? true : false;
+	    return result;
+	} catch (SQLException e) {
+	    return false;
+	} 
+    }
+   
+    /**
+     * Queries the Reservations table for the price of the given reservationId.
+     * 
+     * @param reservationId the reservationId to search for.
+     * 
+     * @return an integer representing the cost of the reservation.
+     */
+    private int getReservationPrice(int reservationId) {
+	try {
+	    getReservationPriceStatement.setInt(1, reservationId);
+	    ResultSet getReservationPriceResult = getReservationPriceStatement.executeQuery();
+
+	    int reservationPrice = 0;
+	    while (getReservationPriceResult.next()) {
+		reservationPrice += getReservationPriceResult.getInt(1);
+	    }
+	    return reservationPrice;
+	} catch (SQLException e) {
+	    return -1;
+	}
+    } 
+
+
+    /**
+     * Gets the attribute of the given reservationId from the ReservationsTable.
+     * 
+     * @param reservationId the reservationId to search for.
+     * @param attribute the attribute to get.
+     * 
+     * @return the value of the attribute for the reservationId.
+     */
+    private int getReservationAttribute(int reservationId, String attribute) {
+	int result = -1;
+	try {
+	    getReservationAttributeStatement.clearParameters();
+	    getReservationAttributeStatement.setInt(2, reservationId);
+	    getReservationAttributeStatement.setString(1, attribute);
+	    ResultSet getReservationAttributeResult = getReservationAttributeStatement.executeQuery();
+	    
+	    result = (getReservationAttributeResult.next()) ? getReservationAttributeResult.getInt(attribute) : -1;
+
+	    getReservationAttributeResult.close();
+	} catch (SQLException e) {
+	    result = -1;
+	} finally {
+	    return result;
+	}
+    }
+
+    /**
+     * Gets the attribute of the given username from the Users table.
+     * 
+     * @param username the username to search for.
+     * @param attribute the attribute to get.
+     * 
+     * @return the value of the attribute for the username.
+     */
+
+    private int getUserAttribute(String username, String attribute) {
+	int result = -1;
+	try {
+	    System.out.println("gua: 1");
+	    getUserAttributeStatement.clearParameters();
+	    System.out.println("gua: 2");
+	    getUserAttributeStatement.setString(2, username);
+	    System.out.println("gua: 3");
+	    getUserAttributeStatement.setString(1, attribute);
+	    System.out.println("gua: 4");
+	    ResultSet getUserAttributeResult = getUserAttributeStatement.executeQuery();
+	    System.out.println("gua: 5");
+	    if (getUserAttributeResult.next()) {
+		System.out.println("gua: in if");
+		result = Integer.parseInt(getUserAttributeResult.getString(attribute));
+	    } 
+	    System.out.println("get user attribute query succeeded, result = " + result);
+	    
+	    getUserAttributeResult.close();
+	} catch (SQLException e) {
+	    result = -1;
+	} finally {
+	    return result;
+	}
+    }
+
+    /**
+     * Queries the Users table for the account balance of the given username.
+     * 
+     * @param username the username to search for.
+     * 
+     * @return The account balance of the given user.
+     */
+    /*
+    private int getUserBalance(String username) {
+	result = -1;
+	try {
+	    getUserBalanceStatement.clearParameters();
+	    getUserBalanceStatement.setInt(1, reservationId);
+	    ResultSet getUserBalanceResult = getUserBalanceStatement.executeQuery();
+
+	    result = (getUserBalanceResult.next()) ? getUserBalanceResult.getInt("price") : -1;
+	} catch (SQLException e) {
+	    result = -1;
+	} finally {
+	    getUserBalanceResult.close();
+	    return result;
+	}
+    }*/ 
+
+    /**
+     * Changes the attribute for the given username to the given value.
+     * 
+     * @param username the username to change an attribute of.
+     * @param attribute the attribute to change the value of.
+     * @param value the value to set.
+     * 
+     * @return true if the update was successful and false otherwise.
+     */
+    private boolean updateUserAttribute(String username, String attribute, int value) {
+	try {
+	    updateUserAttributeStatement.clearParameters();
+	    updateUserAttributeStatement.setString(3, username);
+	    updateUserAttributeStatement.setString(1, attribute);
+	    updateUserAttributeStatement.setInt(2, value);
+	    updateUserAttributeStatement.executeUpdate();
+	    
+	    return true;
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	    return false;
+	}
+    }
+
+    /**
+     * Removes the given amount from the given users account balance in Users table.
+     * 
+     * @param username the username to change the account balance of.
+     * @param amount the new amount to set the users account balance to.
+     * 
+     * @return true if the update was successful and false otherwise.
+     */
+    /*
+    private boolean updateUserBalance(String username, int amount) {
+	try {
+	    updateUserBalanceStatement.clearParameters();
+	    updateUserBalanceStatement.setString(1, username);
+	    updateUserBalanceStatement.setInt(2, amount);
+	    updateUserBalanceStatement.executeUpdate();
+	    
+	    return true;
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	    return false;
+	}
+    }*/ 
+
+    /**
+     * Update the reservationId's attribute to the value.
+     * 
+     * @param reservationId the id to update. 
+     * @param attribute the attribute to update.
+     * @param value the value to update.
+     * 
+     * @return true if the update was successful and false otherwise.
+     */
+    private boolean updateReservationAttribute(int reservationId, String attribute, String value) {
+	try {
+	    updateReservationAttributeStatement.clearParameters();
+	    updateReservationAttributeStatement.setInt(3, reservationId);
+	    updateReservationAttributeStatement.setString(1, attribute);
+	    
+	    switch (value) {
+		case "true":
+		    int state = 1;
+		    updateReservationAttributeStatement.setInt(2, state);
+		default:
+		    updateReservationAttributeStatement.setNull(2, Types.INTEGER);	    
+	    }
+	    
+	    updateReservationAttributeStatement.executeUpdate();
+	    
+	    return true;
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	    return false;
 	}
     }
 
@@ -931,10 +1181,43 @@ public class Query {
      */
     public String transaction_reservations() {
 	try {
-	    // TODO: YOUR CODE HERE
+	    // A user must be logged in to view reservations.
+	    if (this.currentUser == null) {
+		return "Cannot view reservations, not logged in\n";
+	    }
+
+	    // Check that user indeed has reservations.
+	    boolean userHasReservation = doesUserHaveReservation(this.currentUser);
+	    if (!userHasReservation) {
+		return "No Reservations found\n";
+	    }
+
+	    System.out.println("User has reservation.>");
+
+	    
+		
 	    return "Failed to retrieve reservations\n";
 	} finally {
 	    checkDanglingTransaction();
+	}
+    }
+
+    /**
+     * TODO
+     */
+    private boolean doesUserHaveReservation(String username) {
+	try {
+	    getUserReservationsStatement.clearParameters();
+	    getUserReservationsStatement.setString(1, username);
+	    ResultSet getUserReservationsResult = getUserReservationsStatement.executeQuery();
+	    
+	    if (getUserReservationsResult.next()) {
+		return true;
+	    } else {
+		return false;
+	    }
+	} catch (SQLException e) {
+	    return false;
 	}
     }
 
