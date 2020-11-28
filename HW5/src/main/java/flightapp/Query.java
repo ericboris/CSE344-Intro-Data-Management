@@ -145,6 +145,12 @@ public class Query {
 
     private PreparedStatement getUserReservationsOnDayStatement;
 
+    // Get a byte array attribute from the Users table.
+    private static final String GET_USER_BYTE_ATTRIBUTE = "SELECT ?"
+							+ "FROM Users"
+							+ "WHERE username = ?;";
+    private PreparedStatement getUserByteAttributeStatement;
+
     // Get the number of booked seats on a given flight.
     private static final String GET_FLIGHTS_BOOKED_SEATS = "SELECT seats"
 						       + "  FROM BookedSeats"
@@ -202,6 +208,15 @@ public class Query {
 						       + "WHERE username = ?"
 						       + " AND cancelled = 0;";
     private PreparedStatement getUserReservationsStatement;
+
+    // Get the given user's salt.
+    private static final String GET_USER_SALT = "Select salt FROM Users WHERE username = ?;";
+    private PreparedStatement getUserSaltStatement;
+
+    // Get the given user's hash.
+    private static final String GET_USER_HASH = "Select hash FROM Users WHERE username = ?;";
+    private PreparedStatement getUserHashStatement;
+
 
     /**
      * Class constructor.
@@ -322,6 +337,9 @@ public class Query {
 	updateUserAttributeStatement = conn.prepareStatement(UPDATE_USER_ATTRIBUTE);
 	getReservationPriceStatement = conn.prepareStatement(GET_RESERVATION_PRICE);
 	getUserReservationsStatement = conn.prepareStatement(GET_USER_RESERVATIONS);
+	getUserByteAttributeStatement = conn.prepareStatement(GET_USER_BYTE_ATTRIBUTE);
+	getUserSaltStatement = conn.prepareStatement(GET_USER_SALT);
+	getUserHashStatement = conn.prepareStatement(GET_USER_HASH);
     }
 
     /**
@@ -337,64 +355,141 @@ public class Query {
 	try {
 	    // We use lowercase for name comparisons because username is case insensitive.
 	    String lowercaseUsername = username.toLowerCase();
-    
+
 	    // Prevent multiple users from being logged in simultaneously.
 	    if (this.currentUser != null) {
 		return "User already logged in\n";
 	    }
 
+	    // Get user's salt and hash.
+	    byte[] storedSalt = getUserSalt(username);
+	    byte[] storedHash = getUserHash(username);
+	    if (storedSalt == null || storedHash == null) {
+	       return "Login failed\n";
+	    }
+
+	    byte[] generatedSalt = getSalt();
+	    byte[] generatedHash = getHash(password, storedSalt);
+
+	    if (Arrays.equals(storedHash, generatedHash)) {
+		this.itineraries = new ArrayList<>();
+		this.currentUser = username;
+		return "Logged in as " + username + "\n";
+	    }
+
+	    
+	    /* 
 	    // Log the user in.
 	    try {
-		// Prepare the username statement.
-		userLoginStatement.clearParameters();
-		userLoginStatement.setString(1, lowercaseUsername);
+	    // Prepare the username statement.
+	    userLoginStatement.clearParameters();
+	    userLoginStatement.setString(1, lowercaseUsername);
 
-		// Let rs be the results of the query requesting salt and hash.
-		ResultSet rs = userLoginStatement.executeQuery();
+	    // Let rs be the results of the query requesting salt and hash.
+	    ResultSet rs = userLoginStatement.executeQuery();
 
-		// Only proceed if the query returned a result.
-		if (rs.next()) {
-		    // Grab the stored salt.
-		    byte[] salt = rs.getBytes("salt");
+	    // Only proceed if the query returned a result.
+	    if (rs.next()) {
+	    // Grab the stored salt.
+	    byte[] salt = rs.getBytes("salt");
+	    // Specify the hash parameters from the given salt.
+	    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
 
-		    // Specify the hash parameters from the given salt.
-		    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
-
-		    // Generate a hash.
-		    SecretKeyFactory factory = null;
-		    byte[] generatedHash = null;
-		    try {
-			factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-			generatedHash = factory.generateSecret(spec).getEncoded();
-		    } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
-			throw new IllegalStateException();
-		    }
-
-		    // Get the hash returned by the query.
-		    byte[] returnedHash = rs.getBytes("hash");
-		   
-		    // We can log the user in if the hashes are equivalent.
-		    if (Arrays.equals(generatedHash, returnedHash)) {
-			rs.close();
-			// Clear any existing itineraries for the new user.
-			this.itineraries = new ArrayList<>();
-
-			// Store the lowercase name to maintain case insensitive username comparisons.
-			this.currentUser = username;
-			return "Logged in as " + username + "\n";
-		    }
-		}
-	    } catch (SQLException e) {
-		e.printStackTrace();
+	    // Generate a hash.
+	    SecretKeyFactory factory = null;
+	    byte[] generatedHash = null;
+	    try {
+	    factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+	    generatedHash = factory.generateSecret(spec).getEncoded();
+	    } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
+	    throw new IllegalStateException();
 	    }
-	    
-	    // Notify if any of the above failed.
-	    return "Login failed\n";
 
+	    // Get the hash returned by the query.
+	    byte[] returnedHash = rs.getBytes("hash");
+
+	    // We can log the user in if the hashes are equivalent.
+	    if (Arrays.equals(generatedHash, returnedHash)) {
+	    rs.close();
+	    // Clear any existing itineraries for the new user.
+	    this.itineraries = new ArrayList<>();
+
+	    // Store the lowercase name to maintain case insensitive username comparisons.
+	    this.currentUser = username;
+	    return "Logged in as " + username + "\n";
+	    }
+	    }
+	     */
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	}
+	// Notify if any of the above failed.
+	return "Login failed\n";
+	/*
 	} finally {
 	    checkDanglingTransaction();
 	}
+	*/
     }
+
+    /**
+     * TODO
+     */ 
+    public byte[] getUserByteAttribute(String username, String attribute) throws SQLException {
+	try {
+	    getUserByteAttributeStatement.clearParameters();
+	    getUserByteAttributeStatement.setString(1, attribute);
+	    getUserByteAttributeStatement.setString(2, username.toLowerCase());
+
+	    ResultSet getUserByteAttributeResult = getUserByteAttributeStatement.executeQuery();
+	    if (getUserByteAttributeResult.next()) {
+		return getUserByteAttributeResult.getBytes(attribute);
+	    } else {
+		return null;
+	    }
+	} catch (SQLException e) {
+	    throw e;
+	}
+    }
+
+    /**
+     * TODO
+     */
+    public byte[] getUserSalt(String username) throws SQLException {
+	try {
+	    getUserSaltStatement.clearParameters();
+	    getUserSaltStatement.setString(1, username.toLowerCase());
+
+	    ResultSet getUserSaltResult = getUserSaltStatement.executeQuery();
+	    if (getUserSaltResult.next()) {
+		return getUserSaltResult.getBytes("salt");
+	    } else {
+		return null;
+	    }
+	} catch (SQLException e) {
+	    throw e;
+	}
+    }
+
+    /**
+     * TODO
+     */
+    public byte[] getUserHash(String username) throws SQLException {
+	try {
+	    getUserHashStatement.clearParameters();
+	    getUserHashStatement.setString(1, username.toLowerCase());
+
+	    ResultSet getUserHashResult = getUserHashStatement.executeQuery();
+	    if (getUserHashResult.next()) {
+		return getUserHashResult.getBytes("hash");
+	    } else {
+		return null;
+	    }
+	} catch (SQLException e) {
+	    throw e;
+	}
+    }
+		
 
     /**
      * Implement the create user function.
