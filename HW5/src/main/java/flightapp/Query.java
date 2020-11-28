@@ -92,8 +92,7 @@ public class Query {
 					       + "       f2.dest_city AS f2_dest_city,"  
 					       + "       f2.actual_time AS f2_actual_time,"  
 					       + "       f2.capacity AS f2_capacity,"  
-					       + "       f2.price AS f2_price"  
-					       + "  FROM flights as f1,"
+					       + "       f2.price AS f2_price"  + "  FROM flights as f1,"
 					       + "       flights as f2"
 					       + " WHERE f1.origin_city = ?"
 					       + "   AND f2.dest_city = ?"
@@ -107,21 +106,75 @@ public class Query {
 					       + "       f2.fid;";
     private PreparedStatement oneHopFlightStatement;
 
+    // Return whether the ReservationId table has been initialized with a value, 1 if it has and 0 otherwise.
+    private static final String IS_RESERVATION_ID_EMPTY = "SELECT COUNT(*) AS count"
+							      + "  FROM ReservationId;";
+    private PreparedStatement isReservationIdEmptyStatement;
+
+    // Initialize the ReservationId table with a ReservationId of 1.
+    private static final String SEED_RESERVATION_ID = "INSERT INTO ReservationId"
+						    + "VALUES (1);";
+    private PreparedStatement seedReservationIdStatement;   
+ 
+    // Get the current ReservationId.
+    /*
+    private static final String GET_RESERVATION_ID = "SELECT id"
+						   + "  FROM ReservationId;";
+    private PreparedStatement getReservationIdStatement;
+    */
+
+    // Increment the ReservationId.
+    private static final String INCREMENT_RESERVATION_ID = "UPDATE ReservationId"
+							 + "   SET id = id + 1;";
+    private PreparedStatement incrementReservationIdStatement;
+
+    // Add a new Reservation to the Reservations table.
+    private static final String ADD_RESERVATION = "INSERT INTO Reservations"
+						    + " VALUES (?, ?, ?, ?, ?, ?);";  
+    private PreparedStatement addReservationStatement;
+
+    // Get Reservation ID from the Reservations table.
+    private static final String GET_RESERVATION_ID = "SELECT id AS id"
+						   + "  FROM Reservations"
+						   + " WHERE username = ?"
+						   + "   AND price = ?"
+						   + "   AND paid = ?"
+						   + "   AND cancelled = ?"
+						   + "   AND fid1 = ?;";
+    private PreparedStatement getReservationIdStatement;
+
     // Get a user's reservations on a given day.
-    private static final String USER_RESERVATIONS_ON_DAY = "SELECT COUNT(*) as count"
+    private static final String GET_USER_RESERVATIONS_ON_DAY = "SELECT COUNT(*) AS count"
 							 + "  FROM Flights AS f,"
 							 + "       (SELECT fid1"
 							 + "          FROM Reservations"
 							 + "         WHERE username = ?) AS r"
 							 + " WHERE r.fid1 = f.fid"
 							 + "   AND f.day_of_month = ?;"; 
-    private PreparedStatement userReservationsOnDayStatement;
+    private PreparedStatement getUserReservationsOnDayStatement;
+
+    // Return whether a given flight has any booked seats, 1 if it has and 0 otherwise.
+    private static final String ARE_FLIGHTS_SEATS_BOOKED = "SELECT COUNT(*) AS count"
+							 + "  FROM BookedSeats"
+							 + " WHERE fid = ?;";
+    private PreparedStatement areFlightsSeatsBookedStatement;
+
+    // Initialize the given flight to have 0 booked seats.
+    private static final String SEED_FLIGHTS_BOOKED_SEATS = "INSERT INTO BookedSeats"
+							  + "VALUES (0)";
+    private PreparedStatement seedFlightsBookedSeatsStatement;
 
     // Get the number of booked seats on a given flight.
-    private static final String BOOKED_SEATS_ON_FLIGHT = "SELECT seats"
+    private static final String GET_FLIGHTS_BOOKED_SEATS = "SELECT seats"
 						       + "  FROM BookedSeats"
 						       + " WHERE fid = ?;";
-    private PreparedStatement bookedSeatsOnFlightStatement;
+    private PreparedStatement getFlightsBookedSeatsStatement;
+
+    // Increment the number of booked seats on a given flight.
+    private static final String INCREMENT_FLIGHTS_BOOKED_SEATS = "UPDATE BookedSeats"
+							       + "   SET seats = seats + 1"
+							       + " WHERE fid = ?;";
+    private PreparedStatement incrementFlightsBookedSeatsStatement;
 
     /**
      * Class constructor.
@@ -230,8 +283,17 @@ public class Query {
 	userLoginStatement = conn.prepareStatement(USER_LOGIN);
 	directFlightStatement = conn.prepareStatement(DIRECT_FLIGHT);
 	oneHopFlightStatement = conn.prepareStatement(ONE_HOP_FLIGHT);
-	userReservationsOnDayStatement = conn.prepareStatement(USER_RESERVATIONS_ON_DAY);
-	bookedSeatsOnFlightStatement = conn.prepareStatement(BOOKED_SEATS_ON_FLIGHT);
+	isReservationIdEmptyStatement = conn.prepareStatement(IS_RESERVATION_ID_EMPTY);
+	seedReservationIdStatement = conn.prepareStatement(SEED_RESERVATION_ID);
+	//	getReservationIdStatement = conn.prepareStatement(GET_RESERVATION_ID);
+	incrementReservationIdStatement = conn.prepareStatement(INCREMENT_RESERVATION_ID);
+	addReservationStatement = conn.prepareStatement(ADD_RESERVATION);
+	getUserReservationsOnDayStatement = conn.prepareStatement(GET_USER_RESERVATIONS_ON_DAY);
+	areFlightsSeatsBookedStatement = conn.prepareStatement(ARE_FLIGHTS_SEATS_BOOKED);
+	seedFlightsBookedSeatsStatement = conn.prepareStatement(SEED_FLIGHTS_BOOKED_SEATS);
+	getFlightsBookedSeatsStatement = conn.prepareStatement(GET_FLIGHTS_BOOKED_SEATS);
+	incrementFlightsBookedSeatsStatement = conn.prepareStatement(INCREMENT_FLIGHTS_BOOKED_SEATS);
+	getReservationIdStatement = conn.prepareStatement(GET_RESERVATION_ID);
     }
 
     /**
@@ -595,15 +657,17 @@ public class Query {
 
 	    // Query the reservations table for any flights by the user on itineraryDay.
 	    try {
-		userReservationsOnDayStatement.clearParameters();
+		getUserReservationsOnDayStatement.clearParameters();
 		
-		userReservationsOnDayStatement.setString(1, this.currentUser);
-		userReservationsOnDayStatement.setInt(2, itineraryDay);
+		getUserReservationsOnDayStatement.setString(1, this.currentUser);
+		getUserReservationsOnDayStatement.setInt(2, itineraryDay);
 
-		ResultSet userReservationsResult = userReservationsOnDayStatement.executeQuery();
-
+		ResultSet userReservationsResult = getUserReservationsOnDayStatement.executeQuery();
+		int count = -1;
 		// Let count be the number of reservations the user for the day.
-		int count = userReservationsResult.getInt("count");
+		if (userReservationsResult.next()) {
+		    count = userReservationsResult.getInt("count");
+		}
 
 		// Can't have multiple flights booked on a single day.
 		if (count > 0) {
@@ -614,20 +678,43 @@ public class Query {
 	    }  
 
 	    // The user cannot book if there is insufficient capacity on either flight.
+
 	    // Get the available seats on the flight1.
 	    int flight1Capacity = itinerary.flight1.capacity;
 	    int flight1Fid = itinerary.flight1.fid;
 
+	    /*
+	    // Handle the special case where no seats have been booked on flight1.
+	    try {
+		ResultSet areFlightsSeatsBookedResult = areFlightsSeatsBookedStatement.executeQuery();
+		System.out.println(areFlightsSeatsBookedResult);
+		areFlightsSeatsBookedResult.close();
+	    } catch (SQLException e) {
+		System.out.println("The result set has no current row, failed check");
+		try {
+		    // seedFlightsBookedSeatsStatement.clearParameters();
+		    // seedFlightsBookedSeatsStatement.setInt(1, flight1Fid);
+		    seedFlightsBookedSeatsStatement.executeUpdate();
+		} catch (SQLException ee) {
+		    ee.printStackTrace();
+		    System.out.println("failed to seed flight1 booked seats query");
+		    return "Booking failed\n";
+		}
+	    } */
+
 	    // Query the booked seats table for how many seats are booked on flight1.
 	    int flight1BookedSeats = 0;
 	    try {
-		bookedSeatsOnFlightStatement.clearParameters();
-		bookedSeatsOnFlightStatement.setInt(1, flight1Fid);
-		ResultSet flight1BookedSeatsResult = bookedSeatsOnFlightStatement.executeQuery();
-		flight1BookedSeats = flight1BookedSeatsResult.getInt("seats");
+		getFlightsBookedSeatsStatement.clearParameters();
+		getFlightsBookedSeatsStatement.setInt(1, flight1Fid);
+		ResultSet flight1BookedSeatsResult = getFlightsBookedSeatsStatement.executeQuery();
+		if (flight1BookedSeatsResult.next()) {
+		    flight1BookedSeats = flight1BookedSeatsResult.getInt("seats");
+		}
 		flight1BookedSeatsResult.close();
 	    } catch (SQLException e) {
 		e.printStackTrace();
+		System.out.println("failed to get flight1 booked seats query");
 		return "Booking failed\n";
 	    }
 	    int flight1AvailableSeats = flight1Capacity - flight1BookedSeats;
@@ -641,13 +728,14 @@ public class Query {
 
 		// Query the booked seats table for how many seats are booked on flight2;
 		try {
-		    bookedSeatsOnFlightStatement.clearParameters();
-		    bookedSeatsOnFlightStatement.setInt(1, flight2Fid);
-		    ResultSet flight2BookedSeatsResult = bookedSeatsStatement.executeQuery();
+		    getFlightsBookedSeatsStatement.clearParameters();
+		    getFlightsBookedSeatsStatement.setInt(1, flight2Fid);
+		    ResultSet flight2BookedSeatsResult = getFlightsBookedSeatsStatement.executeQuery();
 		    flight2BookedSeats = flight2BookedSeatsResult.getInt("seats");
 		    flight2BookedSeatsResult.close();
 		} catch (SQLException e) {
 		    e.printStackTrace();
+		    System.out.println("failed to get flight2 booked seats query");
 		    return "Booking failed\n";
 		}
 
@@ -657,6 +745,7 @@ public class Query {
 	    
 	    // The user cannot book the flight if there isn't available seating.
 	    if (flight1AvailableSeats == 0 || flight2AvailableSeats == 0) {
+		System.out.println("insufficient seating");
 		return "Booking failed\n";
 	    }
 
@@ -664,64 +753,134 @@ public class Query {
 	    // First will need the reservation id.
 
 	    // Handle the special case where the reservation id table hasn't been used and the id value is empty.
+	    /*
+	    int isReservationIdEmpty = -1;
 	    try {
-		isReservationIdTableEmptyStatement.clearParameters();
-		ResultSet isReservationIdTableEmptyResult = isReservationIdTableEmptyStatement.executeQuery();
-		int isReservationIdTableEmpty = isReservationIdTableEmptyResult.getInt("count");
-		isReservationIdTableEmptyResult.close();
+		ResultSet isReservationIdEmptyResult = isReservationIdEmptyStatement.executeQuery();
+		if (isReservationIdEmptyResult.next()) {
+		    isReservationIdEmpty = isReservationIdEmptyResult.getInt("count");
+		}
+		isReservationIdEmptyResult.close();
 	    } catch (SQLException e) {
 		e.printStackTrace();
+		System.out.println("failed is reservation id empty query");
 		return "Booking failed\n";
 	    }
 
-	    if (isReservationIdTableEmpty == 0) {
+	    if (isReservationIdEmpty == 0) {
 		// Insert the first value into the reservation id table. 
-		seedReservationId.executeUpdate();	
-	    }
+		try {
+		    seedReservationIdStatement.executeUpdate();	
+		} catch (SQLException e) {
+		    e.printStackTrace();
+		    System.out.println("failed seed reservation id query");
+		    return "Booking failed\n";   
+		}
+	    }*/
 
+	    /*
 	    // Get the reservation id. 
 	    int reservationId = 0;
 	    try {
-		getReservationIdStatement.clearParameters();
-		ResultSet reservationIdResult = getReservationIdStatement.executeQuery();
-		reservationId = reservationIdResult.getInt("id"); 
-		reservationIdResult.close();
+		ResultSet getReservationIdResult = getReservationIdStatement.executeQuery();
+		reservationId = getReservationIdResult.getInt("id"); 
+		getReservationIdResult.close();
 	    } catch (SQLException e) {
 		e.printStackTrace();
+		System.out.println("failed get reservation id query");
 		return "Booking failed\n";
 	    }
 
 	    // Update the reservation id.
-	    incrementReservationIdStatement.executeUpdate(); 
+	    try {
+		incrementReservationIdStatement.executeUpdate(); 
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		System.out.println("failed increment reservation id query");
+		return "Booking failed\n";   
+	    }
+	    */
 
 	    // Add the flights in the itinerary to reservations.
 	    // Reservation needs to have: rid, username, price, paid, cancelled, fid1, fid2
 	    // but already have variables for rid, username, fid1, and fid2.
 	    int paid = (itinerary.paid) ? 1 : 0;
 	    int cancelled = (itinerary.cancelled) ? 1 : 0;     	    
+	    // int fid2 = (itinerary.flight2 != null) ? itinerary.flight2.fid : null;
 
-	    addNewReservationStatement.setInt(1, reservationId);
-	    addNewReservationStatement.setString(2, this.currentUser);
-	    addNewReservationStatement.setInt(3, itinerary.price);
-	    addNewReservationStatement.setInt(4, paid);
-	    addNewReservationStatement.setInt(5, cancelled);
-	    addNewReservationStatement.setInt(6, flight1Fid);
-	    addNewReservationStatement.setInt(7, itinerary.flight2.fid);
-	    
-	    addNewReservationStatement.executeUpdate();
+	    try {
+		addReservationStatement.clearParameters();	
+	
+	    //	addReservationStatement.setInt(1, reservationId);
+		addReservationStatement.setString(1, this.currentUser);
+		addReservationStatement.setInt(2, itinerary.price);
+		addReservationStatement.setInt(3, paid);
+		addReservationStatement.setInt(4, cancelled);
+		addReservationStatement.setInt(5, flight1Fid);
+		// addReservationStatement.setInt(6, fid2);
+
+		if (!itinerary.isDirectFlight) {
+		    addReservationStatement.setInt(6, itinerary.flight2.fid);
+		} else {
+		    addReservationStatement.setNull(6, Types.INTEGER);
+		}
+    
+		addReservationStatement.executeUpdate();
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		System.out.println("failed add reservation query");
+		return "Booking failed\n";   
+	    }
 
 	    // Update the booked seats on the flight(s) in the itinerary.
-	    incrementFlightBookedSeatsStatement.clearParameters();
-	    incrementFlightBookedSeatsStatement.setInt(1, flight1Fid);
-	    incrementFlightBookedSeatsStatement.executeUpdate();
+	    try {
+		incrementFlightsBookedSeatsStatement.clearParameters();
+		incrementFlightsBookedSeatsStatement.setInt(1, flight1Fid);
+		incrementFlightsBookedSeatsStatement.executeUpdate();
 
-	    if (!itinerary.isDirectFlight) {
-		incrementFlightBookedSeatsStatement.clearParameters();
-		incrementFlightBookedSeatsStatement.setInt(1, itinerary.flight2.fid);
-		incrementFlightBookedSeatsStatement.executeUpdate();
+		if (!itinerary.isDirectFlight) {
+		    incrementFlightsBookedSeatsStatement.clearParameters();
+		    incrementFlightsBookedSeatsStatement.setInt(1, itinerary.flight2.fid);
+		    incrementFlightsBookedSeatsStatement.executeUpdate();
+		}
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		System.out.println("failed to increment booked seats query");
+		return "Booking failed\n";   
 	    }
 
 	    // If everything has worked then notify that the booking was successful.
+	    // TODO update reservation id
+	    int reservationId = -1;
+	    try {
+		getReservationIdStatement.clearParameters();
+    
+		getReservationIdStatement.setString(1, this.currentUser);
+		getReservationIdStatement.setInt(2, itinerary.price);
+		getReservationIdStatement.setInt(3, paid);
+		getReservationIdStatement.setInt(4, cancelled);
+		getReservationIdStatement.setInt(5, flight1Fid);
+	   
+		/* 
+		if (!itinerary.isDirectFlight) {
+		    getReservationIdStatement.setInt(6, itinerary.flight2.fid);
+		} else {
+		    getReservationIdStatement.setNull(6, Types.INTEGER);
+		} */  
+ 
+		ResultSet getReservationIdResult = getReservationIdStatement.executeQuery();
+	    
+		if (getReservationIdResult.next()) {
+		    reservationId = getReservationIdResult.getInt("id");	
+		}
+
+		getReservationIdResult.close();
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		System.out.println("failed to get reservation id");
+		return "Booking failed\n";
+	    }
+
 	    return "Booked flight(s), reservation ID: " + reservationId + "\n";
 	} finally {
 	    checkDanglingTransaction();
