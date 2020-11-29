@@ -93,6 +93,8 @@ public class Query {
 					       + "       f2.fid AS f2_fid,"  
 					       + "       f2.day_of_month AS f2_day_of_month,"
 					       + "       f2.carrier_id AS f2_carrier_id,"  
+					       + " 	 f2.flight_num AS f2_flight_num,"
+					       + "	 f2.origin_city AS f2_origin_city,"
 					       + "       f2.dest_city AS f2_dest_city,"  
 					       + "       f2.actual_time AS f2_actual_time,"  
 					       + "       f2.capacity AS f2_capacity,"  
@@ -353,103 +355,41 @@ public class Query {
      */
     public String transaction_login(String username, String password) {
 	try {
-	    // We use lowercase for name comparisons because username is case insensitive.
-	    String lowercaseUsername = username.toLowerCase();
-
 	    // Prevent multiple users from being logged in simultaneously.
 	    if (this.currentUser != null) {
 		return "User already logged in\n";
 	    }
 
-	    // Get user's salt and hash.
+	    // Check whether the given username and password combination are valid.
+	    
+	    // Get the salt and hash of the stored username.
 	    byte[] storedSalt = getUserSalt(username);
 	    byte[] storedHash = getUserHash(username);
 	    if (storedSalt == null || storedHash == null) {
 	       return "Login failed\n";
 	    }
 
-	    byte[] generatedSalt = getSalt();
+	    // Generate a hash from the user's salt.
 	    byte[] generatedHash = getHash(password, storedSalt);
 
+	    // If the stored and generated hashes are equal
+	    // then the username an password are valid.
 	    if (Arrays.equals(storedHash, generatedHash)) {
 		this.itineraries = new ArrayList<>();
 		this.currentUser = username;
 		return "Logged in as " + username + "\n";
 	    }
 
-	    
-	    /* 
-	    // Log the user in.
-	    try {
-	    // Prepare the username statement.
-	    userLoginStatement.clearParameters();
-	    userLoginStatement.setString(1, lowercaseUsername);
-
-	    // Let rs be the results of the query requesting salt and hash.
-	    ResultSet rs = userLoginStatement.executeQuery();
-
-	    // Only proceed if the query returned a result.
-	    if (rs.next()) {
-	    // Grab the stored salt.
-	    byte[] salt = rs.getBytes("salt");
-	    // Specify the hash parameters from the given salt.
-	    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, HASH_STRENGTH, KEY_LENGTH);
-
-	    // Generate a hash.
-	    SecretKeyFactory factory = null;
-	    byte[] generatedHash = null;
-	    try {
-	    factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-	    generatedHash = factory.generateSecret(spec).getEncoded();
-	    } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
-	    throw new IllegalStateException();
-	    }
-
-	    // Get the hash returned by the query.
-	    byte[] returnedHash = rs.getBytes("hash");
-
-	    // We can log the user in if the hashes are equivalent.
-	    if (Arrays.equals(generatedHash, returnedHash)) {
-	    rs.close();
-	    // Clear any existing itineraries for the new user.
-	    this.itineraries = new ArrayList<>();
-
-	    // Store the lowercase name to maintain case insensitive username comparisons.
-	    this.currentUser = username;
-	    return "Logged in as " + username + "\n";
-	    }
-	    }
-	     */
 	} catch (SQLException e) {
 	    e.printStackTrace();
 	}
 	// Notify if any of the above failed.
 	return "Login failed\n";
-	/*
+	/*	
 	} finally {
 	    checkDanglingTransaction();
 	}
 	*/
-    }
-
-    /**
-     * TODO
-     */ 
-    public byte[] getUserByteAttribute(String username, String attribute) throws SQLException {
-	try {
-	    getUserByteAttributeStatement.clearParameters();
-	    getUserByteAttributeStatement.setString(1, attribute);
-	    getUserByteAttributeStatement.setString(2, username.toLowerCase());
-
-	    ResultSet getUserByteAttributeResult = getUserByteAttributeStatement.executeQuery();
-	    if (getUserByteAttributeResult.next()) {
-		return getUserByteAttributeResult.getBytes(attribute);
-	    } else {
-		return null;
-	    }
-	} catch (SQLException e) {
-	    throw e;
-	}
     }
 
     /**
@@ -490,7 +430,6 @@ public class Query {
 	}
     }
 		
-
     /**
      * Implement the create user function.
      *
@@ -595,10 +534,6 @@ public class Query {
 	}
     }
 
-
-
-
-
     /**
      * Implement the search function.
      *
@@ -631,148 +566,179 @@ public class Query {
      */
     public String transaction_search(String originCity, String destinationCity, boolean directFlight,
 	    int dayOfMonth, int numberOfItineraries) {
+	// Reinitialize itineraries to an empty list;
+	List<Itinerary> localItineraries = new ArrayList<>();
+
 	try {
-	    StringBuffer sb = new StringBuffer();
-	    
-	    // Reinitialize itineraries to an empty list;
-	    itineraries = new ArrayList<>();
-    
-	    try {
-		// Fill itineraries with flight itineraries.
-		// Get all the direct flights, regardless of directFlight boolean value.
+	    // Get the direct flights
+	    localItineraries = getDirectFlights(localItineraries, numberOfItineraries, originCity, destinationCity, dayOfMonth); 
 
-		// Prepare the query.
-		directFlightStatement.clearParameters();
-		directFlightStatement.setInt(1, numberOfItineraries);
-		directFlightStatement.setString(2, originCity);
-		directFlightStatement.setString(3, destinationCity);
-		directFlightStatement.setInt(4, dayOfMonth);
-	
-		// Get the query.	
-		ResultSet directFlightQueryResult = directFlightStatement.executeQuery();
+	    // Get the number of itineraries currently stored.
+	    int currNumItineraries = localItineraries.size();
 
-		// For each itinerary in the query, add it to itineraries.
-		while (directFlightQueryResult.next()) {	
-		    // Extract the relevant query information.
-		    // Flight 1 info.
-		    int f1fid = directFlightQueryResult.getInt("fid");
-		    int f1dayOfMonth = directFlightQueryResult.getInt("day_of_month");
-		    String f1carrierId = directFlightQueryResult.getString("carrier_id");
-		    String f1flightNum = directFlightQueryResult.getString("flight_num");
-		    String f1originCity = directFlightQueryResult.getString("origin_city");
-		    String f1destCity = directFlightQueryResult.getString("dest_city");
-		    int f1time = directFlightQueryResult.getInt("actual_time");
-		    int f1capacity = directFlightQueryResult.getInt("capacity");
-		    int f1price = directFlightQueryResult.getInt("price");
+	    // Get the number of available spaces for itinerary entries.
+	    int numItinerarySpaces = numberOfItineraries - currNumItineraries;
 
-		    // Use the information to create a new flight.
-		    Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
+	    // If possible, add any indirect flight itineraries to itineraries too.	
+	    // Can only accept indirect flights if, they are admissible
+	    // and there aren't already too many itineraries stored.
+	    if (numItinerarySpaces > 0 && directFlight == false) {
+		localItineraries = getIndirectFlights(localItineraries, numItinerarySpaces, originCity, destinationCity, dayOfMonth);
 
-		    // Add the flight to an itinerary.
-		    Itinerary itinerary = new Itinerary(flight1, null, f1time, true);
-	
-		    // And add the itinerary to the itinerarys list.
-		    itineraries.add(itinerary);
-		}
+		// If indirect flights have been added to itineraries,
+		// then itineraries needs to be sorted by ascending flight times.
+		Collections.sort(localItineraries);
+	    } 		    
 
-		// Finished with the query.
-		directFlightQueryResult.close();
+	    // Save the new itineraries.
+	    this.itineraries = localItineraries;
 
-		// Get the number of itineraries currently stored.
-		int currNumItineraries = itineraries.size();
-
-		// Get the number of available spaces for itinerary entries.
-		int numItinerarySpaces = numberOfItineraries - currNumItineraries;
-
-		// If possible, any indirect flight itineraries to itineraries too.	
-		// Can only accept indirect flights if, they are admissible
-		// and there aren't already too many itineraries stored.
-		if (numItinerarySpaces > 0 && directFlight == false) {
-		    // Prepare the query.
-		    oneHopFlightStatement.clearParameters();
-
-		    oneHopFlightStatement.setInt(1, numItinerarySpaces);
-		    oneHopFlightStatement.setString(2, originCity);
-		    oneHopFlightStatement.setString(3, destinationCity);
-		    oneHopFlightStatement.setInt(4, dayOfMonth);
-
-		    // Get the query.	
-		    ResultSet oneHopFlightQueryResult = oneHopFlightStatement.executeQuery();
-
-		    // For each itinerary in the query, add it to itineraries.
-		    while (oneHopFlightQueryResult.next()) {
-			// Extract the relevant query information.
-			// Flight 1 info.
-			int f1fid = oneHopFlightQueryResult.getInt("f1_fid");
-			int f1dayOfMonth = oneHopFlightQueryResult.getInt("f1_day_of_month");
-			String f1carrierId = oneHopFlightQueryResult.getString("f1_carrier_id");
-			String f1flightNum = oneHopFlightQueryResult.getString("f1_flight_num");
-			String f1originCity = oneHopFlightQueryResult.getString("f1_origin_city");
-			String f1destCity = oneHopFlightQueryResult.getString("f1_dest_city");
-			int f1time = oneHopFlightQueryResult.getInt("f1_actual_time");
-			int f1capacity = oneHopFlightQueryResult.getInt("f1_capacity");
-			int f1price = oneHopFlightQueryResult.getInt("f1_price");
-
-			// Flight 2 info.
-			int f2fid = oneHopFlightQueryResult.getInt("f2_fid");
-			int f2dayOfMonth = oneHopFlightQueryResult.getInt("f2_day_of_month");
-			String f2carrierId = oneHopFlightQueryResult.getString("f2_carrier_id");
-			String f2flightNum = oneHopFlightQueryResult.getString("f2_flight_num");
-			String f2originCity = oneHopFlightQueryResult.getString("f2_origin_city");
-			String f2destCity = oneHopFlightQueryResult.getString("f2_dest_city");
-			int f2time = oneHopFlightQueryResult.getInt("f2_actual_time");
-			int f2capacity = oneHopFlightQueryResult.getInt("f2_capacity");
-			int f2price = oneHopFlightQueryResult.getInt("f2_price");
-
-			// Create the flights from the query info.
-			Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
-			Flight flight2 = new Flight(f2fid, f2dayOfMonth, f2carrierId, f2flightNum, f2originCity, f2destCity, f2time, f2capacity, f2price);
-
-			// Itinerary with multiple flights holds the total flight time.
-			int totalFlightTime = f1time + f2time;
-    
-			// Add the flights to an itinerary.
-			Itinerary itinerary = new Itinerary(flight1, flight2, totalFlightTime, false);
-
-			// And add the itinerary to the itinerarys list.
-			itineraries.add(itinerary);
-		    } 		    
-
-		    // Finished with the query.
-		    oneHopFlightQueryResult.close();
-
-		    // If indirect flights have been added to itineraries,
-		    // then itineraries needs to be sorted by ascending flight times.
-		    Collections.sort(itineraries);
-		}
-
-	    // Fill the string builder with the ordered itineraries.
-	    int n = itineraries.size();
-	    for (int i = 0; i < n; i++) {
-		// Give each itinerary a unique number from 0 to n.
-		sb.append("Itinerary " + i);
-
-		Itinerary itinerary = itineraries.get(i);
-		if (itinerary.isDirectFlight) {
-		    sb.append(": 1 flight(s), " + itinerary.flightTime + " minutes\n" + itinerary.flight1.toString() + "\n"); 
-		} else {
-		    sb.append(": 2 flight(s), " + itinerary.flightTime + " minutes\n" + itinerary.flight1.toString() + "\n" + itinerary.flight2.toString() + "\n");
-		}
-	    }
-	    
-	    // Handle any errors while querying.
-	    } catch (SQLException e) {
-		e.printStackTrace();
-	    }
-	    
-	    // Return a string message about the query results. 
+	    // Generate and format the output string.
+	    StringBuffer sb = toStringBuffer(itineraries);
 	    String output = (sb.length() == 0) ? "No flights match your selection\n" : sb.toString();
+	    
 	    return output;
-    
-	// Clean up. 
-	} finally {
+
+	} catch (SQLException e) {
+	    e.printStackTrace();
+	    return "Failed to search\n";
+	} 
+	/*
+	finally {
 	    checkDanglingTransaction();
 	}
+	*/
+    }
+
+    /**
+     * TODO
+     */
+    private StringBuffer toStringBuffer(List<Itinerary> itineraries) {
+	StringBuffer sb = new StringBuffer();	
+
+	// Fill the string builder with the ordered itineraries.
+	int n = itineraries.size();
+	for (int i = 0; i < n; i++) {
+	    sb.append("Itinerary " + i);
+
+	    Itinerary itinerary = itineraries.get(i);
+	    if (itinerary.isDirectFlight) {
+		sb.append(": 1 flight(s), " + itinerary.flightTime + " minutes\n" + itinerary.flight1.toString() + "\n"); 
+	    } else {
+		sb.append(": 2 flight(s), " + itinerary.flightTime + " minutes\n" + itinerary.flight1.toString() + "\n" + itinerary.flight2.toString() + "\n");
+	    }
+	}
+	return sb;
+    }
+
+
+    /**
+     * TODO
+     */
+    private List<Itinerary> getDirectFlights(List<Itinerary> itineraries, int max, String origin, String destination, int day) throws SQLException {
+	try {
+	    // Fill itineraries with flight itineraries.
+	    // Get all the direct flights, regardless of directFlight boolean value.
+
+	    // Prepare the query.
+	    directFlightStatement.clearParameters();
+	    directFlightStatement.setInt(1, max);
+	    directFlightStatement.setString(2, origin);
+	    directFlightStatement.setString(3, destination);
+	    directFlightStatement.setInt(4, day);
+
+	    // Get the query.	
+	    ResultSet directFlightQueryResult = directFlightStatement.executeQuery();
+
+	    // For each itinerary in the query, add it to itineraries.
+	    while (directFlightQueryResult.next()) {	
+		// Extract the relevant query information.
+		// Flight 1 info.
+		int f1fid = directFlightQueryResult.getInt("fid");
+		int f1dayOfMonth = directFlightQueryResult.getInt("day_of_month");
+		String f1carrierId = directFlightQueryResult.getString("carrier_id");
+		String f1flightNum = directFlightQueryResult.getString("flight_num");
+		String f1originCity = directFlightQueryResult.getString("origin_city");
+		String f1destCity = directFlightQueryResult.getString("dest_city");
+		int f1time = directFlightQueryResult.getInt("actual_time");
+		int f1capacity = directFlightQueryResult.getInt("capacity");
+		int f1price = directFlightQueryResult.getInt("price");
+
+		// Use the information to create a new flight.
+		Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
+
+		// Add the flight to an itinerary.
+		Itinerary itinerary = new Itinerary(flight1, null, f1time, true);
+
+		// And add the itinerary to the itinerarys list.
+		itineraries.add(itinerary);
+	    }
+    
+	    return itineraries;
+	} catch (SQLException e) {
+	    throw e;
+	}
+    }
+
+    /**
+     * TODO
+     */
+    private List<Itinerary> getIndirectFlights(List<Itinerary> itineraries, int max, String origin, String destination, int day) throws SQLException {
+	try {
+	    // Prepare the query.
+	    oneHopFlightStatement.clearParameters();
+
+	    oneHopFlightStatement.setInt(1, max);
+	    oneHopFlightStatement.setString(2, origin);
+	    oneHopFlightStatement.setString(3, destination);
+	    oneHopFlightStatement.setInt(4, day);
+
+	    // Get the query.	
+	    ResultSet oneHopFlightQueryResult = oneHopFlightStatement.executeQuery();
+
+	    // For each itinerary in the query, add it to itineraries.
+	    while (oneHopFlightQueryResult.next()) {
+		// Extract the relevant query information.
+		// Flight 1 info.
+		int f1fid = oneHopFlightQueryResult.getInt("f1_fid");
+		int f1dayOfMonth = oneHopFlightQueryResult.getInt("f1_day_of_month");
+		String f1carrierId = oneHopFlightQueryResult.getString("f1_carrier_id");
+		String f1flightNum = oneHopFlightQueryResult.getString("f1_flight_num");
+		String f1originCity = oneHopFlightQueryResult.getString("f1_origin_city");
+		String f1destCity = oneHopFlightQueryResult.getString("f1_dest_city");
+		int f1time = oneHopFlightQueryResult.getInt("f1_actual_time");
+		int f1capacity = oneHopFlightQueryResult.getInt("f1_capacity");
+		int f1price = oneHopFlightQueryResult.getInt("f1_price");
+
+		// Flight 2 info.
+		int f2fid = oneHopFlightQueryResult.getInt("f2_fid");
+		int f2dayOfMonth = oneHopFlightQueryResult.getInt("f2_day_of_month");
+		String f2carrierId = oneHopFlightQueryResult.getString("f2_carrier_id");
+		String f2flightNum = oneHopFlightQueryResult.getString("f2_flight_num");
+		String f2originCity = oneHopFlightQueryResult.getString("f2_origin_city");
+		String f2destCity = oneHopFlightQueryResult.getString("f2_dest_city");
+		int f2time = oneHopFlightQueryResult.getInt("f2_actual_time");
+		int f2capacity = oneHopFlightQueryResult.getInt("f2_capacity");
+		int f2price = oneHopFlightQueryResult.getInt("f2_price");
+
+		// Create the flights from the query info.
+		Flight flight1 = new Flight(f1fid, f1dayOfMonth, f1carrierId, f1flightNum, f1originCity, f1destCity, f1time, f1capacity, f1price);
+		Flight flight2 = new Flight(f2fid, f2dayOfMonth, f2carrierId, f2flightNum, f2originCity, f2destCity, f2time, f2capacity, f2price);
+
+		// Itinerary with multiple flights holds the total flight time.
+		int totalFlightTime = f1time + f2time;
+
+		// Add the flights to an itinerary.
+		Itinerary itinerary = new Itinerary(flight1, flight2, totalFlightTime, false);
+
+		// And add the itinerary to the itinerarys list.
+		itineraries.add(itinerary);
+	    }
+
+	    return itineraries;
+	} catch (SQLException e) {
+	    throw e;
+	}	
     }
 
     /**
