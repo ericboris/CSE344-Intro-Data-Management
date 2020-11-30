@@ -28,35 +28,48 @@ public class Query {
     // Let the following section contain predefined SQL queries.
 
     // Canned queries
-    private static final String CHECK_FLIGHT_CAPACITY = "SELECT capacity FROM Flights WHERE fid = ?";
     private PreparedStatement checkFlightCapacityStatement;
+    private static final String CHECK_FLIGHT_CAPACITY = ""
+	+ "SELECT capacity"
+	+ "  FROM Flights"
+	+ " WHERE fid = ?";
 
     // For check dangling
-    private static final String TRANCOUNT_SQL = "SELECT @@TRANCOUNT AS tran_count";
     private PreparedStatement tranCountStatement;
+    private static final String TRANCOUNT_SQL = ""
+	+ "SELECT @@TRANCOUNT AS tran_count";
 
     // Used to clear the Users table.
-    private static final String CLEAR_USERS = "DELETE FROM Users;";
     private PreparedStatement clearUsersStatement;
+    private static final String CLEAR_USERS = ""
+	+ "DELETE FROM Users;";
 
     // Used to clear the Reservations table.
-    private static final String CLEAR_RESERVATIONS = "DELETE FROM Reservations;";
     private PreparedStatement clearReservationsStatement;
+    private static final String CLEAR_RESERVATIONS = ""
+	+ "DELETE FROM Reservations;";
 
     // Used to clear the BookedSeats table.
-    private static final String CLEAR_BOOKED_SEATS = "DELETE FROM BookedSeats;";
     private PreparedStatement clearBookedSeatsStatement;
+    private static final String CLEAR_BOOKED_SEATS = ""
+	+ "DELETE FROM BookedSeats;";
 
     // Used to check if username already exists
-    private static final String CHECK_USERNAME_EXISTS = "SELECT COUNT(*) as count FROM Users WHERE username = ?;";
     private PreparedStatement isUsernameTakenStatement;
+    private static final String CHECK_USERNAME_EXISTS = ""
+	+ "SELECT COUNT(*) as count"
+	+ "  FROM Users"
+	+ " WHERE username = ?;";
 
     // Used to add a new user to the Users table.
-    private static final String INSERT_USER_DATA = "INSERT INTO Users VALUES (?, ?, ?, ?);";
     private PreparedStatement addUserStatement;
+    private static final String INSERT_USER_DATA = ""
+	+ "INSERT INTO Users VALUES (?, ?, ?, ?);";
 
     // Used to get the top n direct flights from src to dst on a given day in July 2015. 
-    private static final String DIRECT_FLIGHT = "SELECT top(?)"
+    private PreparedStatement directFlightStatement;
+    private static final String DIRECT_FLIGHT = ""
+	+ "SELECT top(?)"
 	+ "       fid,"  
 	+ "       day_of_month,"
 	+ "       carrier_id,"  
@@ -73,11 +86,12 @@ public class Query {
 	+ "   AND canceled <> 1"
 	+ " ORDER BY actual_time ASC,"
 	+ "       fid ASC;";
-    private PreparedStatement directFlightStatement;
 
     // Used to get the top one-hop flights from src to dst on a given day in July 2015.
-    private static final String ONE_HOP_FLIGHT = "select TOP(?)"
-	+ "       f1.fid as f1_fid,"  
+    private PreparedStatement oneHopFlightStatement;
+    private static final String ONE_HOP_FLIGHT = ""
+	+ "SELECT TOP(?)"
+	+ "       f1.fid AS f1_fid,"  
 	+ "       f1.day_of_month AS f1_day_of_month,"
 	+ "       f1.carrier_id AS f1_carrier_id,"  
 	+ "       f1.flight_num AS f1_flight_num,"  
@@ -106,108 +120,143 @@ public class Query {
 	+ " ORDER BY (f1.actual_time + f2.actual_time) ASC,"
 	+ "       f1.fid,"
 	+ "       f2.fid;";
-    private PreparedStatement oneHopFlightStatement;
 
     // Add a new Reservation to the Reservations table.
-    private static final String ADD_RESERVATION = "INSERT INTO Reservations"
-	+ " VALUES (?, ?, ?, ?, ?, ?, ?);";  
     private PreparedStatement addReservationStatement;
+    private static final String ADD_RESERVATION = ""
+	+ "INSERT INTO Reservations"
+	+ " VALUES (?, ?, ?, ?, ?, ?, ?);";  
 
     // Add a new BookedSeat entry.
-    private static final String ADD_BOOKED_SEAT = "INSERT INTO BookedSeats"
-	+ " VALUES (?, ?);";
     private PreparedStatement addBookedSeatStatement;
+    private static final String ADD_BOOKED_SEAT = ""
+	+ "INSERT INTO BookedSeats"
+	+ " VALUES (?, ?);";
 
     // Get Reservation ID from the Reservations table.
-    private static final String GET_RESERVATION_ID = "SELECT id AS id"
+    private PreparedStatement getReservationIdStatement;
+    private static final String GET_RESERVATION_ID = ""
+	+ "SELECT id AS id"
 	+ "  FROM Reservations"
 	+ " WHERE username = ?"
 	+ "   AND price = ?"
 	+ "   AND paid = ?"
 	+ "   AND canceled = ?"
 	+ "   AND fid1 = ?;";
-    private PreparedStatement getReservationIdStatement;
 
     // Get a user's reservations on a given day 
-    private static final String GET_USER_OPEN_RESERVATIONS_ON_DAY = "SELECT COUNT(*) AS count"
+    private PreparedStatement doesUserHaveReservationStatement;
+    private static final String GET_USER_OPEN_RESERVATIONS_ON_DAY = ""
+	+ "SELECT COUNT(*) AS count"
 	+ "  FROM Flights AS f,"
 	+ "       (SELECT fid1"
 	+ "          FROM Reservations"
 	+ "         WHERE username = ?) AS r"
 	+ " WHERE r.fid1 = f.fid"
 	+ "   AND f.day_of_month = ?;"; 
-    private PreparedStatement doesUserHaveReservationStatement;
 
     // Get the number of booked seats on a given flight.
-    private static final String GET_FLIGHTS_BOOKED_SEATS = "SELECT seats"
+    private PreparedStatement getBookedSeatsStatement;
+    private static final String GET_FLIGHTS_BOOKED_SEATS = ""
+	+ "SELECT seats"
 	+ "  FROM BookedSeats"
 	+ " WHERE fid = ?;";
-    private PreparedStatement getBookedSeatsStatement;
 
     // Increment the number of booked seats on a given flight.
-    private static final String INCREMENT_FLIGHTS_BOOKED_SEATS = "UPDATE BookedSeats"
+    private PreparedStatement incrementBookedSeatsStatement;
+    private static final String INCREMENT_FLIGHTS_BOOKED_SEATS = ""
+	+ "UPDATE BookedSeats"
 	+ "   SET seats = seats + 1"
 	+ " WHERE fid = ?;";
-    private PreparedStatement incrementBookedSeatsStatement;
 
     // Return whether the given username booked the given reservation.
-    private static final String DID_USER_BOOK_RESERVATION = "SELECT COUNT(*) AS count"
+    private PreparedStatement userHasUnpaidReservationStatement;
+    private static final String DID_USER_BOOK_RESERVATION = ""
+	+ "SELECT COUNT(*) AS count"
 	+ "  FROM Reservations"
 	+ " WHERE id = ?"
 	+ "   AND username = ?" 
 	+ "   AND paid = 0"
 	+ "   AND canceled = 0;";
-    private PreparedStatement userHasUnpaidReservationStatement;
 
     // Update the attribute for the given reservationId with the given value.
-    private static final String UPDATE_RESERVATION_PAID = "UPDATE Reservations"
+    private PreparedStatement setReservationPaidStatement;
+    private static final String UPDATE_RESERVATION_PAID = ""
+	+ "UPDATE Reservations"
 	+ "   SET paid = ?"
 	+ " WHERE id = ?"; 
-    private PreparedStatement setReservationPaidStatement;
 
     // Return the attribute for the given username.
-    private static final String GET_USER_BALANCE = "SELECT balance"
+    private PreparedStatement getUserBalanceStatement;
+    private static final String GET_USER_BALANCE = ""
+	+ "SELECT balance"
 	+ "  FROM Users"
 	+ " WHERE username = ?;";
-    private PreparedStatement getUserBalanceStatement;
 
     // Update the attribute for the given username with the given value.
-    private static final String UPDATE_USER_BALANCE = "UPDATE Users"
+    private PreparedStatement setUserBalanceStatement;
+    private static final String UPDATE_USER_BALANCE = ""
+	+ "UPDATE Users"
 	+ "   SET balance = ?"
 	+ " WHERE username = ?"; 
-    private PreparedStatement setUserBalanceStatement;
 
     // Get reservation cost. 
-    private static final String GET_RESERVATION_PRICE = "Select price from Reservations where id = ?;";
     private PreparedStatement getReservationPriceStatement;
+    private static final String GET_RESERVATION_PRICE = ""
+	+ "SELECT price"
+	+ "  FROM Reservations"
+	+ " WHERE id = ?;";
 
     // Get the given user's reservations.
-    private static final String GET_USER_OPEN_RESERVATIONS = "Select id, price, paid, canceled, fid1, fid2 From Reservations WHERE username = ? and canceled = 0;";
     private PreparedStatement getOpenReservations;
+    private static final String GET_USER_OPEN_RESERVATIONS = ""
+	+ "SELECT id, price, paid, canceled, fid1, fid2"
+	+ "  FROM Reservations"
+	+ " WHERE username = ?"
+	+ "   AND canceled = 0;";
 
     // Get the given user's salt.
-    private static final String GET_USER_SALT = "Select salt FROM Users WHERE username = ?;";
     private PreparedStatement getUserSaltStatement;
+    private static final String GET_USER_SALT = ""
+	+ "SELECT salt"
+	+ "  FROM Users"
+	+ " WHERE username = ?;";
 
     // Get the given user's hash.
-    private static final String GET_USER_HASH = "Select hash FROM Users WHERE username = ?;";
     private PreparedStatement getUserHashStatement;
+    private static final String GET_USER_HASH = ""
+	+ "SELECT hash"
+	+ "  FROM Users"
+	+ " WHERE username = ?;";
 
     // Get the size of the reservations table.
-    private static final String GET_RESERVATIONS_SIZE = "Select count(*) as count From reservations;";
     private PreparedStatement getReservationsSizeStatement;
+    private static final String GET_RESERVATIONS_SIZE = ""
+	+ "SELECT count(*) AS count"
+	+ "  FROM reservations;";
 
     // Get a flight's information via fid.
-    private static final String GET_FLIGHT = "Select day_of_month, carrier_id, flight_num, origin_city, dest_city, actual_time, capacity, price FROM Flights WHERE fid = ?;";
     private PreparedStatement getFlightStatement;
+    private static final String GET_FLIGHT = ""
+	+ "SELECT day_of_month, carrier_id, flight_num, origin_city, dest_city, actual_time, capacity, price"
+	+ "  FROM Flights"
+	+ " WHERE fid = ?;";
 
     // Change a reservation's cancellation attribute status.
-    private static final String SET_RESERVATION_CANCELLATION = "UPDATE Reservations SET canceled = ? WHERE id = ?;";
     private PreparedStatement setReservationCancelledStatement;
+    private static final String SET_RESERVATION_CANCELLATION = ""
+	+ "UPDATE Reservations"
+	+ "   SET canceled = ?"
+	+ " WHERE id = ?;";
 
     // Returns results there's a user in the Reservations table with the given reservation Id. 
-    private static final String RESERVATION_MATCHES_USER = "SELECT COUNT(*) AS count FROM Reservations WHERE id = ? AND username = ? AND canceled = 0;";
     private PreparedStatement reservationMatchesUserStatement;
+    private static final String RESERVATION_MATCHES_USER = ""
+	+ "SELECT COUNT(*) AS count"
+	+ "  FROM Reservations"
+	+ " WHERE id = ?"
+	+ "   AND username = ?"
+	+ "   AND canceled = 0;";
 
     /**
      * Class constructor.
