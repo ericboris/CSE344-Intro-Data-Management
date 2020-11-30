@@ -113,6 +113,11 @@ public class Query {
 	+ " VALUES (?, ?, ?, ?, ?, ?, ?);";  
     private PreparedStatement addReservationStatement;
 
+    // Add a new BookedSeat entry.
+    private static final String ADD_BOOKED_SEAT = "INSERT INTO BookedSeats"
+	+ " VALUES (?, ?);";
+    private PreparedStatement addBookedSeatStatement;
+
     // Get Reservation ID from the Reservations table.
     private static final String GET_RESERVATION_ID = "SELECT id AS id"
 	+ "  FROM Reservations"
@@ -134,7 +139,7 @@ public class Query {
     private PreparedStatement doesUserHaveReservationStatement;
 
     // Get the number of booked seats on a given flight.
-    private static final String GET_FLIGHTS_BOOKED_SEATS = "SELECT COUNT(*) as count"
+    private static final String GET_FLIGHTS_BOOKED_SEATS = "SELECT seats"
 	+ "  FROM BookedSeats"
 	+ " WHERE fid = ?;";
     private PreparedStatement getBookedSeatsStatement;
@@ -333,6 +338,7 @@ public class Query {
 	clearBookedSeatsStatement = conn.prepareStatement(CLEAR_BOOKED_SEATS);
 	getBookedSeatsStatement = conn.prepareStatement(GET_FLIGHTS_BOOKED_SEATS);
 	incrementBookedSeatsStatement = conn.prepareStatement(INCREMENT_FLIGHTS_BOOKED_SEATS);
+	addBookedSeatStatement = conn.prepareStatement(ADD_BOOKED_SEAT);
 
 	// Misc.	
 	tranCountStatement = conn.prepareStatement(TRANCOUNT_SQL);
@@ -731,7 +737,7 @@ public class Query {
 
 		boolean flightsHaveAvailableSeats = doesItineraryHaveSeats(itinerary);
 		if (!flightsHaveAvailableSeats) {
-		    // conn.setAutoCommit(true);
+		    conn.setAutoCommit(true);
 		    return "Booking failed\n";
 		}
 
@@ -777,7 +783,6 @@ public class Query {
     private boolean doesItineraryHaveSeats(Itinerary itinerary) throws SQLException {
 	int f1Capacity = itinerary.flight1.capacity;
 	int fid1 = itinerary.flight1.fid;
-
 	int f1BookedSeats = getBookedSeats(fid1);
 	int f1AvailableSeats = f1Capacity - f1BookedSeats;
 
@@ -789,7 +794,6 @@ public class Query {
 	if (!itinerary.isDirectFlight) {
 	    int f2Capacity = itinerary.flight2.capacity;
 	    int fid2 = itinerary.flight2.fid;
-
 	    int f2BookedSeats = getBookedSeats(fid2);
 	    int f2AvailableSeats = f2Capacity - f2BookedSeats;
 
@@ -819,16 +823,34 @@ public class Query {
     }
 
     /**
+     * Add a new BookedSeat flight entry.
+     */
+    private void addBookedSeat(int fid) throws SQLException {
+	addBookedSeatStatement.clearParameters();
+	addBookedSeatStatement.setInt(1, fid);
+	addBookedSeatStatement.setInt(2, 0);
+	addBookedSeatStatement.executeUpdate();
+    }
+
+    /**
      * Increment the number of booked seats on the itinerary's given flights by one. 
      */
     private void incrementBookedSeats(Itinerary itinerary) throws SQLException {
+	int fid1 = itinerary.flight1.fid;	
+	if (getBookedSeats(fid1) == 0) {
+	    addBookedSeat(fid1);
+	}
 	incrementBookedSeatsStatement.clearParameters();
-	incrementBookedSeatsStatement.setInt(1, itinerary.flight1.fid);
+	incrementBookedSeatsStatement.setInt(1, fid1);
 	incrementBookedSeatsStatement.executeUpdate();
 
 	if (!itinerary.isDirectFlight) {
+	    int fid2 = itinerary.flight2.fid;
+	    if (getBookedSeats(fid2) == 0) {
+		addBookedSeat(fid2);
+	    }
 	    incrementBookedSeatsStatement.clearParameters();
-	    incrementBookedSeatsStatement.setInt(1, itinerary.flight2.fid);
+	    incrementBookedSeatsStatement.setInt(1, fid2);
 	    incrementBookedSeatsStatement.executeUpdate();
 	}
     }
@@ -865,8 +887,12 @@ public class Query {
 	getBookedSeatsStatement.clearParameters();
 	getBookedSeatsStatement.setInt(1, fid);
 	ResultSet rs = getBookedSeatsStatement.executeQuery();
-	rs.next();
-	int result = rs.getInt("count");
+	int result;
+	if(rs.next()) {
+	    result = rs.getInt("seats");
+	} else {
+	    result = 0;
+	}
 	rs.close();
 	return result; 
     }
@@ -1042,7 +1068,7 @@ public class Query {
 		StringBuffer sb = reservationStringBuffer(reservations);
 
 		if (sb.length() == 0) {
-		    //conn.setAutoCommit(true);
+		    conn.setAutoCommit(true);
 		    return "No flights match your selection\n";
 		}		    
 
@@ -1073,7 +1099,7 @@ public class Query {
     private StringBuffer reservationStringBuffer(List<Itinerary> reservations) {
 	StringBuffer sb = new StringBuffer();	
 
-	int n = itineraries.size();
+	int n = reservations.size();
 	for (int i = 0; i < n; i++) {
 	    sb.append("Reservation " + Integer.toString(i + 1));
 
