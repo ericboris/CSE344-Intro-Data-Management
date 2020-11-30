@@ -1,0 +1,18 @@
+# Try same user book simultaneous different flights, insufficient funds for both
+create user1 user1 1500
+login user1 user1
+search "Seattle WA" "Boston MA" 1 1 2 
+book 0
+quit 
+*
+# Expect fail sometimes
+*
+# Try same user book other of two flights
+create user1 user1 1500
+login user1 user1
+search "Seattle WA" "Boston MA" 1 1 2
+book 1
+quit
+*
+# Expect other fail
+*

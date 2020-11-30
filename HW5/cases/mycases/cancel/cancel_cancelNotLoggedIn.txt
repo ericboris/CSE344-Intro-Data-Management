@@ -1,0 +1,8 @@
+# try to cancel when not logged in
+cancel 0
+quit
+*
+# expected fail, not logged in
+Cannot cancel reservations, not logged in
+Goodbye
+*

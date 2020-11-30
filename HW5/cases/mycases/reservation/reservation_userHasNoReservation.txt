@@ -1,0 +1,12 @@
+# The logged in user has no reservation.
+create user1 user1 10000
+login user1 user1
+reservations
+quit
+*
+# Expect no reservation print out
+Created user user1
+Logged in as user1
+No reservations found
+Goodbye
+*
