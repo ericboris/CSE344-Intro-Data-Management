@@ -208,7 +208,7 @@ public class Query {
 	+ " WHERE id = ?;";
 
     // Get the given user's reservations.
-    private PreparedStatement getOpenReservations;
+    private PreparedStatement getOpenReservationsStatement;
     private static final String GET_USER_OPEN_RESERVATIONS = ""
 	+ "SELECT id, price, paid, canceled, fid1, fid2"
 	+ "  FROM Reservations"
@@ -242,8 +242,8 @@ public class Query {
 	+ "  FROM Flights"
 	+ " WHERE fid = ?;";
 
-    // Change a reservation's cancellation attribute status.
-    private PreparedStatement setReservationCancelledStatement;
+    // Change a reservation's ancellation attribute status.
+    private PreparedStatement setReservationCanceledStatement;
     private static final String SET_RESERVATION_CANCELLATION = ""
 	+ "UPDATE Reservations"
 	+ "   SET canceled = ?"
@@ -257,6 +257,13 @@ public class Query {
 	+ " WHERE id = ?"
 	+ "   AND username = ?"
 	+ "   AND canceled = 0;";
+    
+    // Return the reservationId's canceled attribute.
+    private PreparedStatement getReservationCanceledStatement;
+    private static final String GET_RESERVATION_CANCELED = ""
+	+ "SELECT canceled"
+	+ "  FROM Reservations"
+	+ " WHERE id = ?;";
 
     /**
      * Class constructor.
@@ -378,10 +385,11 @@ public class Query {
 	userHasUnpaidReservationStatement = conn.prepareStatement(DID_USER_BOOK_RESERVATION);
 	setReservationPaidStatement = conn.prepareStatement(UPDATE_RESERVATION_PAID);
 	getReservationPriceStatement = conn.prepareStatement(GET_RESERVATION_PRICE);
-	getOpenReservations = conn.prepareStatement(GET_USER_OPEN_RESERVATIONS);
+	getOpenReservationsStatement = conn.prepareStatement(GET_USER_OPEN_RESERVATIONS);
 	getReservationsSizeStatement = conn.prepareStatement(GET_RESERVATIONS_SIZE);
-	setReservationCancelledStatement = conn.prepareStatement(SET_RESERVATION_CANCELLATION);
+	setReservationCanceledStatement = conn.prepareStatement(SET_RESERVATION_CANCELLATION);
 	reservationMatchesUserStatement = conn.prepareStatement(RESERVATION_MATCHES_USER);
+	getReservationCanceledStatement = conn.prepareStatement(GET_RESERVATION_CANCELED);
 
 	// BookedSeats Statements
 	clearBookedSeatsStatement = conn.prepareStatement(CLEAR_BOOKED_SEATS);
@@ -408,6 +416,12 @@ public class Query {
 	    // Prevent multiple users from being logged in simultaneously.
 	    if (this.user != null) {
 		return "User already logged in\n";
+	    }
+
+	    // Check whether the given username exists.
+	    boolean usernameExists = isUsernameTaken(username);
+	    if (!usernameExists) {
+		return "Login failed\n";
 	    }
 
 	    // Check whether the given username and password combination are valid.
@@ -858,11 +872,14 @@ public class Query {
      * Return the reservationId given the reservation's booking information. 
      */
     private int getReservationId(String username, Itinerary itinerary) throws SQLException {
+	int paid = (itinerary.paid) ? 1 : 0;
+	int canceled = (itinerary.canceled) ? 1 : 0;
+    
 	getReservationIdStatement.clearParameters();
 	getReservationIdStatement.setString(1, username);
 	getReservationIdStatement.setInt(2, itinerary.price);
-	getReservationIdStatement.setBoolean(3, itinerary.paid);
-	getReservationIdStatement.setBoolean(4, itinerary.canceled);
+	getReservationIdStatement.setInt(3, paid);
+	getReservationIdStatement.setInt(4, canceled);
 	getReservationIdStatement.setInt(5, itinerary.flight1.fid);
 	ResultSet rs = getReservationIdStatement.executeQuery();
 	rs.next();
@@ -911,12 +928,14 @@ public class Query {
 	addReservationStatement.clearParameters();	
 
 	int size = getReservationsSize();	
+	int paid = (itinerary.paid) ? 1 : 0;
+	int canceled = (itinerary.canceled) ? 1 : 0;
 
 	addReservationStatement.setInt(1, size + 1); 
 	addReservationStatement.setString(2, username);
 	addReservationStatement.setInt(3, itinerary.price);
-	addReservationStatement.setBoolean(4, itinerary.paid);
-	addReservationStatement.setBoolean(5, itinerary.canceled);
+	addReservationStatement.setInt(4, paid);
+	addReservationStatement.setInt(5, canceled);
 	addReservationStatement.setInt(6, itinerary.flight1.fid);
 
 	// Handle the case where there's no flight2.
@@ -1170,9 +1189,9 @@ public class Query {
      * Return a list of the open reservations held by the user. 
      */
     private List<Itinerary> getOpenReservations(String username) throws SQLException {
-	getOpenReservations.clearParameters();
-	getOpenReservations.setString(1, username.toLowerCase());
-	ResultSet rs = getOpenReservations.executeQuery();	
+	getOpenReservationsStatement.clearParameters();
+	getOpenReservationsStatement.setString(1, username.toLowerCase());
+	ResultSet rs = getOpenReservationsStatement.executeQuery();	
 
 	List<Itinerary> itineraries = new ArrayList<>();
 	while (rs.next()) {
@@ -1245,8 +1264,9 @@ public class Query {
 		    int price = getReservationPrice(reservationId);
 		    int userBalance = getUserBalance(this.user);
 		    int newUserBalance = userBalance + price;
+		    int canceled = 1;
 		    setUserBalance(this.user, newUserBalance);
-		    setReservationCancelled(reservationId, true);
+		    setReservationCanceled(reservationId, canceled);
 
 		    conn.commit();
 		    conn.setAutoCommit(true);
@@ -1270,16 +1290,28 @@ public class Query {
 	return "Failed to cancel reservation " + reservationId + "\n";
     }
 
+    /**
+     * Get the reservation's canceled attribute.
+     */
+    private int getReservationCanceled(int reservationId) throws SQLException {
+	getReservationCanceledStatement.clearParameters();
+	getReservationCanceledStatement.setInt(1, reservationId);
+	ResultSet rs = getReservationCanceledStatement.executeQuery();
+	rs.next();
+	int result = rs.getInt("canceled");
+	rs.close();
+	return result;
+    }
 
     /**
-     * Set the reservation's cancelled attribute to the given state:
+     * Set the reservation's canceled attribute to the given state:
      * true if 1 and false if 0.
      */
-    private void setReservationCancelled(int reservationId, boolean state) throws SQLException {
-	setReservationCancelledStatement.clearParameters();
-	setReservationCancelledStatement.setBoolean(1, state);
-	setReservationCancelledStatement.setInt(2, reservationId);
-	setReservationCancelledStatement.executeUpdate();
+    private void setReservationCanceled(int reservationId, int state) throws SQLException {
+	setReservationCanceledStatement.clearParameters();
+	setReservationCanceledStatement.setInt(1, state);
+	setReservationCanceledStatement.setInt(2, reservationId);
+	setReservationCanceledStatement.executeUpdate();
     }
 
 
