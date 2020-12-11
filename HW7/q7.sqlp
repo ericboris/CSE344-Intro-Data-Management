@@ -1,0 +1,25 @@
+/*
+    Find all countries bordering two or more seas. 
+    Here you need to join the "sea" collection with the "country" collection. 
+    For each country in your list, return its code, its name, and the list of bordering seas, 
+    in decreasing order of the number of seas. Name your output attributes country_code, 
+    country_name, seas. 
+    The attribute seas should be a list of objects, each with the attribute sea. 
+    [Result Size: 74 rows of {"country_code":..., "country_name":..., "seas": [{"sea":...}, {"sea":...}, ...]}]
+*/
+
+SELECT DISTINCT
+       c2.`-car_code` AS country_code,
+       c2.name AS country_name,	
+       s2 AS seas
+  FROM geo.world AS g2,
+       g2.mondial.country c2
+       LET s2 = (SELECT s1.name AS sea
+		   FROM geo.world AS g1,
+			g1.mondial.country AS c1,
+			g1.mondial.sea AS s1,
+			SPLIT(s1.`-country`, " ") AS cid
+		  WHERE c1.`-car_code` = cid
+		    AND c1 = c2)
+ WHERE ARRAY_COUNT(s2) >= 2
+ ORDER BY ARRAY_COUNT(s2) DESC;	
