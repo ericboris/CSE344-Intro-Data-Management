@@ -1,0 +1,17 @@
+/*
+    For each religion return the number of countries where it occurs; 
+    order them in decreasing number of countries. 
+    Name your output attributes religion, num_countries. 
+    [Result size: 37 of {"religion':..., "num_countries":...}] 
+*/
+
+SELECT r.`#text` AS religion, COUNT(c.name) AS num_countries
+  FROM geo.world AS g,
+       g.mondial.country AS c,
+       (CASE WHEN c.religions IS MISSING
+	     THEN []
+	     WHEN is_array(c.religions)
+	     THEN c.religions
+	     ELSE [c.religions] END) AS r
+ GROUP BY r.`#text` 
+ ORDER BY num_countries DESC;

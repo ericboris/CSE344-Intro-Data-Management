@@ -1,0 +1,10 @@
+/*
+    4. For each ethnic group, return the number of countries where it occurs, 
+    as well as the total population world-wide of that group. 
+    Hint: you need to multiply the ethnicity’s percentage with the country’s population. 
+    Use the functions float(x) and/or int(x) to convert a string to a float or to an int. 
+    Name your output attributes ethnic_group, num_countries, total_population. 
+    You can leave your final total_population as a float if you like. 
+    [Result Size: 262 of {"ethnic_group":..., "num_countries":..., "total_population":...}] 
+*/
+
