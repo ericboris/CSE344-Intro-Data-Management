@@ -881,3 +881,4 @@ java.lang.reflect.InaccessibleObjectException: Unable to make public long com.su
 16:44:07.417 [Executor-6:asterix_nc2] INFO  org.apache.asterix.app.replication.message.RegistrationTasksResponseMessage - Completed startup task: { "class" : "StartLifecycleComponentsTask" }
 16:44:07.418 [Executor-6:asterix_nc2] INFO  org.apache.asterix.app.replication.message.RegistrationTasksResponseMessage - Starting startup task: { "class" : "UpdateNodeStatusTask" }
 16:44:07.418 [Executor-6:asterix_nc2] INFO  org.apache.asterix.app.replication.message.RegistrationTasksResponseMessage - Completed startup task: { "class" : "UpdateNodeStatusTask" }
+17:06:48.504 [org.apache.hyracks.api.rewriter.runtime.SuperActivity:JID:0.13:TAID:TID:ANID:ODID:1:0:1:0:0] WARN  org.apache.hyracks.dataflow.std.collectors.NonDeterministicChannelReader - Sender failed.. returning silently

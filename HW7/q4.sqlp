@@ -8,3 +8,15 @@
     [Result Size: 262 of {"ethnic_group":..., "num_countries":..., "total_population":...}] 
 */
 
+SELECT e.`#text` AS ethnic_group, 
+       COUNT(c.name) AS num_countries, 
+       SUM((FLOAT(e.`-percentage`) / 100) * INT(c.population)) AS total_population 
+  FROM geo.world AS g, 
+       g.mondial.country AS c,
+       (CASE WHEN c.ethnicgroups IS MISSING
+	     THEN []
+	     WHEN is_array(c.ethnicgroups)
+	     THEN c.ethnicgroups 
+	     ELSE [c.ethnicgroups] END) AS e
+ GROUP BY e.`#text`;
+
