@@ -1,0 +1,23 @@
+/*
+    5. Compute the list of all mountains, their heights, and the countries where they are located. 
+    Here you will join the "mountain" collection with the "country" collection, on the country code. 
+    You should return a list consisting of the mountain name, its height, the country code, and 
+    country name, in descending order of the height. 
+    Name your output attributes mountain, height, country_code, country_name. 
+    [Result Size: 272 rows of {"mountain":..., "height":..., "country_code":..., "country_name":...}]
+
+    Hint: Some mountains can be located in more than one country. 
+    You need to output them for each country they are located in.
+*/
+
+SELECT m.name AS mountain, 
+       INT(m.height) AS height, 
+       c.`-car_code` AS country_code, 
+       c.name AS country_name
+  FROM geo.world AS g, 
+       g.mondial.country AS c, 
+       g.mondial.mountain AS m, 
+       SPLIT(m.`-country`, " ") AS mid
+ WHERE c.`-car_code` = mid
+ ORDER BY height DESC;
+
