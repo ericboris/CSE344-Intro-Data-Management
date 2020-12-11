@@ -1,0 +1,30 @@
+/*
+    Compute a list of countries with all their mountains. 
+    This is similar to the previous problem, 
+    but now you will group the mountains for each country; 
+    return both the mountain name and its height. 
+    Your query should return a list where each element consists of the 
+    country code, country name, and a list of mountain names and heights; 
+    order the countries by the number of mountains they contain, in descending order. 
+    Name your output attributes country_code, country_name, mountains. 
+    The attribute mountains should be a list of objects, 
+    each with the attributes mountain and height. 
+    [Result Size: 238 rows of {"country_code":..., "country_name":..., "mountains": [{"mountain":..., "height":...}, {"mountain":..., "height":...}, ...]}]
+*/
+
+SELECT DISTINCT 
+       c2.`-car_code` AS country_code,
+       c2.name AS country_name, 
+       m2 AS mountains
+  FROM geo.world AS g2,
+       g2.mondial.country AS c2
+       LET m2 = (SELECT m1.name AS mountain, 
+			m1.height AS height
+		   FROM geo.world AS g1,
+			g1.mondial.country as c1,
+			g1.mondial.mountain AS m1,
+			SPLIT(m1.`-country`, " ") AS mid
+		  WHERE c1.`-car_code` = mid
+		    AND c1 = c2
+		  ORDER BY INT(height) DESC)
+ ORDER BY ARRAY_COUNT(m2);
