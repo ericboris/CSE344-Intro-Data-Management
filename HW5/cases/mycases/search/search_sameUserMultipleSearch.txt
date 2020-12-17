@@ -1,0 +1,42 @@
+# The same user searches at the same time
+create user1 user1 1000
+login user1 user1
+search "Seattle WA" "Boston MA" 1 1 1
+quit
+*
+# Expect to succeed
+Failed to create user
+Logged in as user1
+Itinerary 0: 1 flight(s), 297 minutes
+ID: 60454 Day: 1 Carrier: AS Number: 24 Origin: Seattle WA Dest: Boston MA Duration: 297 Capacity: 14 Price: 140
+Goodbye
+#
+|
+#
+Created user user1
+Logged in as user1
+Itinerary 0: 1 flight(s), 297 minutes
+ID: 60454 Day: 1 Carrier: AS Number: 24 Origin: Seattle WA Dest: Boston MA Duration: 297 Capacity: 14 Price: 140
+Goodbye
+*
+# Same user search different
+create user1 user1 1000
+login user1 user1
+search "Boston MA" "Seattle WA" 1 1 1 
+quit
+*
+# Expect to succeed
+Created user user1
+Logged in as user1
+Itinerary 0: 1 flight(s), 353 minutes
+ID: 717865 Day: 1 Carrier: B6 Number: 497 Origin: Boston MA Dest: Seattle WA Duration: 353 Capacity: 11 Price: 234
+Goodbye
+# 
+|
+#
+Failed to create user
+Logged in as user1
+Itinerary 0: 1 flight(s), 353 minutes
+ID: 717865 Day: 1 Carrier: B6 Number: 497 Origin: Boston MA Dest: Seattle WA Duration: 353 Capacity: 11 Price: 234
+Goodbye
+*

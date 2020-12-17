@@ -146,8 +146,8 @@ public class SparkApp {
 
         // ************************************************************
         // IMPORTANT - Change this comment before running on a cluster:
-        SparkSession spark = createLocalSession();
-        // SparkSession spark = createClusterSession();
+	// SparkSession spark = createLocalSession();
+        SparkSession spark = createClusterSession();
         // ************************************************************
 
         Dataset<Row> r = warmup(spark, dataFile);

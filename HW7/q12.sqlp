@@ -1,0 +1,29 @@
+/*
+    12. Modify the query from 11. to return, for each pair of countries, 
+    the list of common mountains, and the list of common seas. 
+    Name your output attributes first_country, second_country, mountains, seas. 
+    [Result Size: 7 rows of {"mountains":[{"mountain":...}, ...], "seas":[{"sea":...}, ...], "first_country":..., "second_country":...}]
+*/
+
+SELECT DISTINCT 
+       c1.name AS first_country,
+       c2.name AS second_country,
+       m2 AS mountains,
+       s2 AS seas
+  FROM geoindex.country AS c1,
+       geoindex.country AS c2
+   LET m2 = (SELECT DISTINCT m1.name
+	       FROM geoindex.mountain AS m1,
+		    SPLIT(m1.`-country`, " ") AS mid1,
+		    SPLIT(m1.`-country`, " ") AS mid2
+	      WHERE mid1 = c1.`-car_code`
+		AND mid2 = c2.`-car_code`),
+       s2 = (SELECT DISTINCT s1.name
+	       FROM geoindex.sea AS s1,
+		    SPLIT(s1.`-country`, " ") AS sid1,
+		    SPLIT(s1.`-country`, " ") AS sid2
+	      WHERE sid1 = c1.`-car_code`
+		AND sid2 = c2.`-car_code`)
+ WHERE c1.`-car_code` < c2.`-car_code`
+   AND ARRAY_COUNT(m2) > 0
+   AND ARRAY_COUNT(s2) > 0;

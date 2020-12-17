@@ -1,16 +1,21 @@
 /*
-    2. For each country return its name, its population, and the number of religions sorted alphabetically by country. 
-    Report 0 religions for countries without religions. Name your output attributes country, population, num_religions. 
+    2. For each country return its name, its population, 
+    and the number of religions sorted alphabetically by country. 
+    Report 0 religions for countries without religions. 
+    Name your output attributes country, population, num_religions. 
     [Result Size: 238 rows of {"num_religions":..., "country":..., "population":...}]
 */
 
-SELECT co.name, co.population, array_count(religions) AS num_religions
+SELECT c.name, 
+       c.population, 
+       COUNT(r) AS num_religions
   FROM geo.world AS g,
-       g.mondial.country AS co
-       LET religions = (CASE WHEN co.religions IS MISSING
-			     THEN []
-			     WHEN is_array(co.religions)
-			     THEN co.religions
-			     ELSE [co.religions] END)
- GROUP BY co.name, co.population, array_count(religions)
- ORDER BY co.name ASC;
+       g.mondial.country AS c,
+       (CASE WHEN c.religions IS MISSING
+	     THEN []
+	     WHEN is_array(c.religions)
+	     THEN c.religions
+	     ELSE [c.religions] END) AS r
+ GROUP BY c.name, 
+       c.population
+ ORDER BY c.name ASC;

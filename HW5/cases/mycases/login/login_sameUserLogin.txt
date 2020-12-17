@@ -1,0 +1,32 @@
+# Login same user same time
+create user1 user1 100
+login user1 user1
+quit
+*
+# Expect succeed or fail
+Created user user1
+Logged in as user1
+Goodbye
+#
+|
+#
+Failed to create user
+Logged in as user1
+Goodbye
+*
+# Login same user again
+create user1 user1 100
+login user1 user1
+quit
+*
+# Expect succeed or fail
+Failed to create user
+Logged in as user1
+Goodbye
+#
+|
+#
+Created user user1
+Logged in as user1
+Goodbye
+*

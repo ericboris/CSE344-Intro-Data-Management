@@ -1,4 +1,9 @@
 -------------------------------------------------------------------------------
 Test set: flightapp.FlightServiceTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.389 s - in flightapp.FlightServiceTest
+Tests run: 52, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 187.129 s <<< FAILURE! - in flightapp.FlightServiceTest
+flightapp.FlightServiceTest.runTest[44]  Time elapsed: 0.288 s  <<< ERROR!
+java.lang.IllegalArgumentException: ERROR: input file is malformatted, extra information found #commands=22, len(result)=0, #results=0
+	at flightapp.FlightServiceTest.parse(FlightServiceTest.java:179)
+	at flightapp.FlightServiceTest.runTest(FlightServiceTest.java:280)
+

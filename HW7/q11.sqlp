@@ -5,7 +5,7 @@
     [Result Size: 7 rows of {"first_country":..., "second_country":...}]
 */
 
-/* "elapsedTime": "172.642166ms" */
+-- "elapsedTime": "172.642166ms"
 
 SELECT DISTINCT 
        c1.name AS first_country,

@@ -1,0 +1,16 @@
+# create two different users
+create user1 user1 100
+quit
+*
+# Expect succeed
+Created user user1
+Goodbye
+*
+# create second user
+create user2 user2 100
+quit
+*
+# Expect succeed
+Created user user2
+Goodbye
+*

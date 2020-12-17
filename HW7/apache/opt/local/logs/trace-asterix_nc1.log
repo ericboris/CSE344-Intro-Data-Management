@@ -1,6 +1,1 @@
-[{"name":"Trace-Start","cat":"Tracer","ph":"i","pid":"95851","tid":1,"ts":1607554297803032,"s":"p","args":{"datetime":"2020-12-09T14:51:37.802-08:00"}},
-{"name":"Trace-Start","cat":"Tracer","ph":"i","pid":"98010","tid":1,"ts":1607557829465012,"s":"p","args":{"datetime":"2020-12-09T15:50:29.464-08:00"}},
-{"name":"Trace-Start","cat":"Tracer","ph":"i","pid":"22382","tid":1,"ts":1607642390779016,"s":"p","args":{"datetime":"2020-12-10T15:19:50.777-08:00"}},
-{"name":"Trace-Start","cat":"Tracer","ph":"i","pid":"1083","tid":1,"ts":1607647446356019,"s":"p","args":{"datetime":"2020-12-10T16:44:06.355-08:00"}},
-{"name":"Trace-Start","cat":"Tracer","ph":"i","pid":"1888","tid":1,"ts":1607650988819021,"s":"p","args":{"datetime":"2020-12-10T17:43:08.817-08:00"}},
-{"name":"Trace-Start","cat":"Tracer","ph":"i","pid":"2260","tid":1,"ts":1607652734652015,"s":"p","args":{"datetime":"2020-12-10T18:12:14.650-08:00"}},
+[

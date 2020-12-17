@@ -1,0 +1,8 @@
+# create a username thats too long
+create abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz 100
+quit
+*
+# Expect failed 
+Failed to create user
+Goodbye
+*

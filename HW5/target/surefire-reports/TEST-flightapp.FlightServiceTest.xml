@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="flightapp.FlightServiceTest" time="4.389" tests="2" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="flightapp.FlightServiceTest" time="187.129" tests="52" errors="1" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="15"/>
-    <property name="test.cases" value="cases/mycases/create"/>
+    <property name="test.cases" value="cases/"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
     <property name="java.class.path" value="/Users/ericboris/.m2/repository/org/apache/maven/surefire/surefire-booter/3.0.0-M4/surefire-booter-3.0.0-M4.jar:/Users/ericboris/.m2/repository/org/apache/maven/surefire/surefire-api/3.0.0-M4/surefire-api-3.0.0-M4.jar:/Users/ericboris/.m2/repository/org/apache/maven/surefire/surefire-logger-api/3.0.0-M4/surefire-logger-api-3.0.0-M4.jar:/Users/ericboris/Documents/CSE 344/HW5/target/test-classes:/Users/ericboris/Documents/CSE 344/HW5/target/classes:/Users/ericboris/.m2/repository/junit/junit/4.13/junit-4.13.jar:/Users/ericboris/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/Users/ericboris/.m2/repository/com/microsoft/sqlserver/mssql-jdbc/8.2.0.jre11/mssql-jdbc-8.2.0.jre11.jar:/Users/ericboris/.m2/repository/org/mybatis/mybatis/3.5.4/mybatis-3.5.4.jar:/Users/ericboris/Documents/CSE 344/HW5/distributed.jar:/Users/ericboris/.m2/repository/org/apache/maven/surefire/surefire-junit4/3.0.0-M4/surefire-junit4-3.0.0-M4.jar:/Users/ericboris/.m2/repository/org/apache/maven/surefire/common-java5/3.0.0-M4/common-java5-3.0.0-M4.jar:/Users/ericboris/.m2/repository/org/apache/maven/surefire/common-junit3/3.0.0-M4/common-junit3-3.0.0-M4.jar:/Users/ericboris/.m2/repository/org/apache/maven/surefire/common-junit4/3.0.0-M4/common-junit4-3.0.0-M4.jar"/>
     <property name="java.vm.vendor" value="Oracle Corporation"/>
@@ -13,7 +13,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/Library/Java/JavaVirtualMachines/jdk-15.0.1.jdk/Contents/Home/lib"/>
-    <property name="sun.java.command" value="org.apache.maven.surefire.booter.ForkedBooter /Users/ericboris/Documents/CSE 344/HW5/target/surefire 2020-11-20T17-54-13_010-jvmRun1 surefire421858953004127591tmp surefire_014256305065618562997tmp"/>
+    <property name="sun.java.command" value="org.apache.maven.surefire.booter.ForkedBooter /Users/ericboris/Documents/CSE 344/HW5/target/surefire 2020-12-01T11-09-29_344-jvmRun1 surefire7838802189092892943tmp surefire_04102627442610386413tmp"/>
     <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="/Users/ericboris/Documents/CSE 344/HW5/target/test-classes:/Users/ericboris/Documents/CSE 344/HW5/target/classes:/Users/ericboris/.m2/repository/junit/junit/4.13/junit-4.13.jar:/Users/ericboris/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/Users/ericboris/.m2/repository/com/microsoft/sqlserver/mssql-jdbc/8.2.0.jre11/mssql-jdbc-8.2.0.jre11.jar:/Users/ericboris/.m2/repository/org/mybatis/mybatis/3.5.4/mybatis-3.5.4.jar:/Users/ericboris/Documents/CSE 344/HW5/distributed.jar:"/>
@@ -53,6 +53,63 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="59.0"/>
   </properties>
-  <testcase name="runTest[0]" classname="flightapp.FlightServiceTest" time="1.706"/>
-  <testcase name="runTest[1]" classname="flightapp.FlightServiceTest" time="1.188"/>
+  <testcase name="runTest[0]" classname="flightapp.FlightServiceTest" time="10.006"/>
+  <testcase name="runTest[1]" classname="flightapp.FlightServiceTest" time="4.968"/>
+  <testcase name="runTest[2]" classname="flightapp.FlightServiceTest" time="7.468"/>
+  <testcase name="runTest[3]" classname="flightapp.FlightServiceTest" time="7.653"/>
+  <testcase name="runTest[4]" classname="flightapp.FlightServiceTest" time="10.461"/>
+  <testcase name="runTest[5]" classname="flightapp.FlightServiceTest" time="5.471"/>
+  <testcase name="runTest[6]" classname="flightapp.FlightServiceTest" time="10.317"/>
+  <testcase name="runTest[7]" classname="flightapp.FlightServiceTest" time="4.773"/>
+  <testcase name="runTest[8]" classname="flightapp.FlightServiceTest" time="5.159"/>
+  <testcase name="runTest[9]" classname="flightapp.FlightServiceTest" time="2.622"/>
+  <testcase name="runTest[10]" classname="flightapp.FlightServiceTest" time="2.005"/>
+  <testcase name="runTest[11]" classname="flightapp.FlightServiceTest" time="1.957"/>
+  <testcase name="runTest[12]" classname="flightapp.FlightServiceTest" time="1.945"/>
+  <testcase name="runTest[13]" classname="flightapp.FlightServiceTest" time="2.33"/>
+  <testcase name="runTest[14]" classname="flightapp.FlightServiceTest" time="2.793"/>
+  <testcase name="runTest[15]" classname="flightapp.FlightServiceTest" time="2.265"/>
+  <testcase name="runTest[16]" classname="flightapp.FlightServiceTest" time="2.078"/>
+  <testcase name="runTest[17]" classname="flightapp.FlightServiceTest" time="1.33"/>
+  <testcase name="runTest[18]" classname="flightapp.FlightServiceTest" time="6.544"/>
+  <testcase name="runTest[19]" classname="flightapp.FlightServiceTest" time="1.923"/>
+  <testcase name="runTest[20]" classname="flightapp.FlightServiceTest" time="7.177"/>
+  <testcase name="runTest[21]" classname="flightapp.FlightServiceTest" time="1.941"/>
+  <testcase name="runTest[22]" classname="flightapp.FlightServiceTest" time="2.07"/>
+  <testcase name="runTest[23]" classname="flightapp.FlightServiceTest" time="0.608"/>
+  <testcase name="runTest[24]" classname="flightapp.FlightServiceTest" time="0.431"/>
+  <testcase name="runTest[25]" classname="flightapp.FlightServiceTest" time="0.972"/>
+  <testcase name="runTest[26]" classname="flightapp.FlightServiceTest" time="0.79"/>
+  <testcase name="runTest[27]" classname="flightapp.FlightServiceTest" time="0.726"/>
+  <testcase name="runTest[28]" classname="flightapp.FlightServiceTest" time="8.024"/>
+  <testcase name="runTest[29]" classname="flightapp.FlightServiceTest" time="0.397"/>
+  <testcase name="runTest[30]" classname="flightapp.FlightServiceTest" time="2.46"/>
+  <testcase name="runTest[31]" classname="flightapp.FlightServiceTest" time="6.572"/>
+  <testcase name="runTest[32]" classname="flightapp.FlightServiceTest" time="2.608"/>
+  <testcase name="runTest[33]" classname="flightapp.FlightServiceTest" time="1.599"/>
+  <testcase name="runTest[34]" classname="flightapp.FlightServiceTest" time="5.734"/>
+  <testcase name="runTest[35]" classname="flightapp.FlightServiceTest" time="0.803"/>
+  <testcase name="runTest[36]" classname="flightapp.FlightServiceTest" time="8.85"/>
+  <testcase name="runTest[37]" classname="flightapp.FlightServiceTest" time="5.785"/>
+  <testcase name="runTest[38]" classname="flightapp.FlightServiceTest" time="6.972"/>
+  <testcase name="runTest[39]" classname="flightapp.FlightServiceTest" time="8.271"/>
+  <testcase name="runTest[40]" classname="flightapp.FlightServiceTest" time="0.773"/>
+  <testcase name="runTest[41]" classname="flightapp.FlightServiceTest" time="4.605"/>
+  <testcase name="runTest[42]" classname="flightapp.FlightServiceTest" time="1.822"/>
+  <testcase name="runTest[43]" classname="flightapp.FlightServiceTest" time="2.373"/>
+  <testcase name="runTest[44]" classname="flightapp.FlightServiceTest" time="0.288">
+    <error message="ERROR: input file is malformatted, extra information found #commands=22, len(result)=0, #results=0" type="java.lang.IllegalArgumentException"><![CDATA[java.lang.IllegalArgumentException: ERROR: input file is malformatted, extra information found #commands=22, len(result)=0, #results=0
+	at flightapp.FlightServiceTest.parse(FlightServiceTest.java:179)
+	at flightapp.FlightServiceTest.runTest(FlightServiceTest.java:280)
+]]></error>
+    <system-out><![CDATA[running test scenario: /Users/ericboris/Documents/CSE 344/HW5/cases/mycases/testideas.txt
+]]></system-out>
+  </testcase>
+  <testcase name="runTest[45]" classname="flightapp.FlightServiceTest" time="0.817"/>
+  <testcase name="runTest[46]" classname="flightapp.FlightServiceTest" time="0.809"/>
+  <testcase name="runTest[47]" classname="flightapp.FlightServiceTest" time="0.878"/>
+  <testcase name="runTest[48]" classname="flightapp.FlightServiceTest" time="0.977"/>
+  <testcase name="runTest[49]" classname="flightapp.FlightServiceTest" time="0.775"/>
+  <testcase name="runTest[50]" classname="flightapp.FlightServiceTest" time="0.387"/>
+  <testcase name="runTest[51]" classname="flightapp.FlightServiceTest" time="3.878"/>
 </testsuite>

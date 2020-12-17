@@ -90,3 +90,11 @@ Using Java version: 15.0.1
 18:12:12.922 [main] INFO  org.apache.hyracks.control.nc.service.NCService - Launching NCDriver process
 Using Java version: 15.0.1
 18:12:14.410 [main] WARN  org.apache.hyracks.control.nc.NCLogConfigurationFactory - logs are being redirected to: /Users/ericboris/Documents/CSE 344/HW7/apache/opt/local/logs/nc-asterix_nc2.log
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by org.apache.hyracks.util.ExitUtil$ExitThread (file:/Users/ericboris/Documents/CSE%20344/HW7/apache/repo/hyracks-util-0.3.6.jar) to field java.lang.ApplicationShutdownHooks.hooks
+WARNING: Please consider reporting this to the maintainers of org.apache.hyracks.util.ExitUtil$ExitThread
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+17:08:57.245 [main] INFO  org.apache.hyracks.control.nc.service.NCService - NCDriver exited with return value 99
+17:08:57.269 [main] INFO  org.apache.hyracks.control.nc.service.NCService - Terminating NCService based on return value from NCDriver
+17:08:57.270 [main] INFO  org.apache.hyracks.control.nc.service.NCService - JVM Exiting.. Bye!

@@ -5,7 +5,8 @@
     [Result size: 37 of {"religion':..., "num_countries":...}] 
 */
 
-SELECT r.`#text` AS religion, COUNT(c.name) AS num_countries
+SELECT r.`#text` AS religion, 
+       COUNT(c.name) AS num_countries
   FROM geo.world AS g,
        g.mondial.country AS c,
        (CASE WHEN c.religions IS MISSING
